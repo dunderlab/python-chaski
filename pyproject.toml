@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chaski-confluent"
+version = "0.1a5"
+description = "Chaski Confluent"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "BSD-2-Clause" }
+authors = [
+    { name = "Yeison Cardona", email = "yencardonaal@unal.edu.co" }
+]
+maintainers = [
+    { name = "Yeison Cardona", email = "yencardonaal@unal.edu.co" }
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = []
+
+[project.urls]
+"Repository" = "https://github.com/dunderlab/python-chaski"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["chaski"]
+[project.optional-dependencies]
+dev = [
+    "networkx",
+    "matplotlib",
+    "colorama",
+    ]
+docs = []
+
+security = [
+    "cryptography"
+]
+
+[project.scripts]
+chaski_certificate_authority = "chaski.scripts.certificate_authority:main"
+chaski_remote_proxy = "chaski.scripts.remote_proxy:main"
+chaski_streamer_root = "chaski.scripts.streamer_root:main"
+chaski_terminate_connections = "chaski.scripts.terminate_connections:main"
+
