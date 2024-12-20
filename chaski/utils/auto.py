@@ -13,7 +13,7 @@ from typing import List, Union
 import asyncio
 from string import ascii_uppercase
 
-PORT = 65432
+PORT = 65440
 
 
 # ----------------------------------------------------------------------
@@ -87,9 +87,7 @@ async def run_transmission(producer, consumer, parent=None):
         async for incoming_message in message_queue:
 
             if parent:
-                parent.assertEqual(
-                    f'test{count}', incoming_message.data['data']
-                )
+                parent.assertEqual(f'test{count}', incoming_message.data['data'])
 
             if count >= 5:
                 return
