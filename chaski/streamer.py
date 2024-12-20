@@ -17,9 +17,12 @@ Classes
 import os
 import asyncio
 import hashlib
+from queue import Queue as SyncQueue
 from asyncio import Queue
 from typing import Generator
 from chaski.node import ChaskiNode
+from chaski.utils.persistent_storage import PersistentStorage
+from typing import Any
 
 
 ########################################################################
@@ -40,6 +43,8 @@ class ChaskiStreamer(ChaskiNode):
         chunk_size: int = 8192,
         file_handling_callback: callable = None,
         allow_incoming_files: bool = False,
+        sync: bool = False,
+        persistent_storage: bool = False,
         *args: tuple,
         **kwargs: dict,
     ):
@@ -56,13 +61,24 @@ class ChaskiStreamer(ChaskiNode):
             A callback function to handle file inputs. This function should accept `name`, `path`, and `hash` as arguments.
         allow_incoming_files : bool, optional
             Flag to enable or disable processing of incoming file chunks. Defaults to False.
+        sync : bool, optional
+            Flag to enable or disable synchronous processing. Defaults to False.
+        persistent_storage : bool, optional
+            Flag to enable or disable persistent storage. Defaults to False.
         *args : tuple
             Additional positional arguments to pass to the superclass initializer.
         **kwargs : dict
             Additional keyword arguments to pass to the superclass initializer.
         """
         super().__init__(*args, **kwargs)
-        self.message_queue = Queue()
+
+        self.sync = sync
+
+        if self.sync:
+            self.message_queue = SyncQueue()
+        else:
+            self.message_queue = Queue()
+
         self.chunk_size = chunk_size
         self.destination_folder = destination_folder
         self.file_handling_callback = file_handling_callback
@@ -71,6 +87,10 @@ class ChaskiStreamer(ChaskiNode):
 
         self.enable_message_propagation()
         self.add_propagation_command('ChaskiMessage')
+        self.add_propagation_command('ChaskiStorageRequest')
+
+        if persistent_storage:
+            self.persistent_storage = PersistentStorage()
 
     # ----------------------------------------------------------------------
     def __repr__(self):
@@ -157,8 +177,7 @@ class ChaskiStreamer(ChaskiNode):
         return {
             # Get the status of paired events for each subscription
             "paired": {
-                sub: self.paired_event[sub].is_set()
-                for sub in self.subscriptions
+                sub: self.paired_event[sub].is_set() for sub in self.subscriptions
             },
             # Check if the server is closing; 'True' means it's still serving.
             "serving": not self.server_closing,
@@ -234,9 +253,7 @@ class ChaskiStreamer(ChaskiNode):
         await self._write('ChaskiMessage', data=data, topic=topic)
 
     # ----------------------------------------------------------------------
-    async def _process_ChaskiMessage(
-        self, message: 'Message', edge: 'Edge'
-    ) -> None:
+    async def _process_ChaskiMessage(self, message: 'Message', edge: 'Edge') -> None:
         """
         Process an incoming Chaski message and place it onto the message queue.
 
@@ -260,7 +277,12 @@ class ChaskiStreamer(ChaskiNode):
         components of the application.
         """
         if not self.terminate_stream_flag:
-            await self.message_queue.put(message)
+
+            if self.sync:
+                self.message_queue.put(message)
+                await asyncio.sleep(0)
+            else:
+                await self.message_queue.put(message)
 
     # ----------------------------------------------------------------------
     def activate_file_transfer(self) -> None:
@@ -377,9 +399,7 @@ class ChaskiStreamer(ChaskiNode):
             hash_func.update(chunk)
             # Package the chunked file data along with metadata such as filename, hash, and chunk size
             package_data = {
-                'filename': (
-                    filename if filename else os.path.split(file.name)[-1]
-                ),
+                'filename': (filename if filename else os.path.split(file.name)[-1]),
                 'chunk': chunk,
                 'hash': hash_func.hexdigest(),
                 'data': data,
@@ -396,9 +416,7 @@ class ChaskiStreamer(ChaskiNode):
                 break
 
     # ----------------------------------------------------------------------
-    async def _process_ChaskiFile(
-        self, message: 'Message', edge: 'Edge'
-    ) -> None:
+    async def _process_ChaskiFile(self, message: 'Message', edge: 'Edge') -> None:
         """
         Process an incoming ChaskiFile message and append each chunk of data to the target file.
 
@@ -428,9 +446,7 @@ class ChaskiStreamer(ChaskiNode):
         # Append incoming file chunk data to the target file in append-binary mode
         if chunk := message.data.pop('chunk'):
             with open(
-                os.path.join(
-                    self.destination_folder, message.data['filename']
-                ),
+                os.path.join(self.destination_folder, message.data['filename']),
                 'ab',
             ) as file:
                 # Write the current chunk to the target file in append-binary mode
@@ -446,3 +462,77 @@ class ChaskiStreamer(ChaskiNode):
                         'destiny_folder': self.destination_folder,
                     }
                 )
+
+    # ----------------------------------------------------------------------
+    async def _process_ChaskiStorageRequest(
+        self, message: "Message", edge: "Edge"
+    ) -> None:
+        """
+        Process a storage request received via Chaski.
+
+        Parameters
+        ----------
+        message : Message
+            The incoming message containing the storage request details.
+        edge : Edge
+            The edge connection through which the message was received.
+        """
+        # Extract the storage request and connection details from the incoming message data
+        requests = message.data["request"]
+        ip = message.data["ip"]
+        port = message.data["port"]
+
+        # Check if the requested storage is available in persistent storage
+        if requests in self.persistent_storage:
+            response = self.persistent_storage.pop(requests)
+            # Prepare the response data structure for sending back
+            data = {"request": requests, "response": response}
+            # Send the storage response via UDP to the specified IP and port
+            await self._send_udp_message("storage", data, ip, port)
+
+    # ----------------------------------------------------------------------
+    def _process_udp_storage(self, message: "Message") -> None:
+        """
+        Process a storage response received via UDP.
+
+        Parameters
+        ----------
+        message : Message
+            The incoming message containing the storage response details.
+        """
+        requests = message.data["request"]
+        response = message.data["response"]
+        self.store_data(requests, response)
+
+    # ----------------------------------------------------------------------
+    def store_data(self, id_: str, value: Any) -> None:
+        """
+        Store data in the persistent storage.
+
+        Parameters
+        ----------
+        id_ : str
+            The unique identifier for the data.
+        value : Any
+            The value to be stored.
+        """
+        self.persistent_storage[id_] = value
+
+    # ----------------------------------------------------------------------
+    async def fetch_storage(self, id_: str) -> None:
+        """
+        Request to fetch storage data.
+
+        Parameters
+        ----------
+        id_ : str
+            The unique identifier of the data to fetch.
+        """
+        # Prepare the data structure for the storage request, including the identifier and connection details
+        data = {
+            "request": id_,
+            "ip": self.ip,
+            "port": self.port,
+        }
+        # Send the storage request message over the network
+        await self._write("ChaskiStorageRequest", data=data, topic="storage")
