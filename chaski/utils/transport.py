@@ -1,112 +1,164 @@
-from kombu import transport
+import os
+from queue import Empty
+import time
+from typing import Optional, Any
 
-# from kombu import Queue
+from kombu import transport
 from kombu.transport.virtual import Transport, Channel
 from chaski.streamer_sync import ChaskiStreamerSync
 
-from queue import Empty
-
-import base64
-import json
-
-# Definimos un tópico constante
 CHASKI_TOPIC = "celery_tasks"
 
 
+########################################################################
 class ChaskiChannel(Channel):
-    def __init__(self, *args, **kwargs):
+    """
+    A custom Kombu channel implementation using ChaskiStreamerSync.
+
+    Parameters
+    ----------
+    args : tuple
+        Positional arguments for the base Channel class.
+    kwargs : dict
+        Keyword arguments for the base Channel class.
+    """
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
         self.producer = ChaskiStreamerSync(
-            # port=8511,
-            name='Producer',
+            name="ChaskiChannel Producer",
             paired=True,
         )
-        self.producer.connect('ChaskiStreamer@127.0.0.1:65433')
-
-        self.consumer = None
-
-    def _new_queue(self, queue, **kwargs):
-        # El objeto `queue` es una instancia de `Queue`, de Kombu
-        print(f"Creando cola lógica: {queue}")
-        # No es necesario crear el tópico en Kafka; los mensajes se manejan en `KAFKA_TOPIC`
-
-    def _delete(self, queue, **kwargs):
-        # No se puede eliminar un tópico de Kafka mediante la API de Kafka
-        print(f"No se puede eliminar la cola lógica: {queue}")
-
-    def _put(self, queue, message, **kwargs):
-        # Publicar el mensaje en el tópico constante de Kafka, con los detalles de la cola lógica en los metadatos
-        print(
-            f"Publicando mensaje en el tópico '{CHASKI_TOPIC}' para la cola lógica '{queue}'"
+        self.producer.connect(
+            os.getenv("CHASKI_STREAMER_ROOT", "*ChaskiStreamer@127.0.0.1:65433")
         )
-        # Añadimos el nombre de la cola como un campo en el mensaje para que se pueda distinguir
-        message_with_metadata = {
-            'queue': queue,  # Usamos `queue.name` para identificar la cola lógica
-            'body': message['body'],
-        }
+        time.sleep(0.5)
 
-        message['body'] = json.dumps(message['body']).encode('utf-8')
+        self.consumer: Optional[ChaskiStreamerSync] = None
 
-        self.producer.push(CHASKI_TOPIC, message_with_metadata)
+    # ----------------------------------------------------------------------
+    def _new_queue(self, queue: str, **kwargs: Any) -> None:
+        """
+        Simulates the creation of a new logical queue.
 
-    def _get(self, queue, timeout=None):
-        # Si no existe el consumidor, lo creamos
+        Parameters
+        ----------
+        queue : str
+            The name of the logical queue.
+        kwargs : dict
+            Additional arguments.
+        """
+        pass
+
+    # ----------------------------------------------------------------------
+    def _delete(self, queue: str, **kwargs: Any) -> None:
+        """
+        Simulates the deletion of a logical queue.
+
+        Parameters
+        ----------
+        queue : str
+            The name of the logical queue to delete.
+        kwargs : dict
+            Additional arguments.
+        """
+        pass
+
+    # ----------------------------------------------------------------------
+    def _put(self, queue: str, message: dict, **kwargs: Any) -> None:
+        """
+        Publishes a message to the logical queue.
+
+        Parameters
+        ----------
+        queue : str
+            The name of the logical queue.
+        message : dict
+            The message to be published.
+        kwargs : dict
+            Additional arguments.
+        """
+        self.producer.push(CHASKI_TOPIC, message)
+
+    # ----------------------------------------------------------------------
+    def _get(self, queue: str, timeout: Optional[int] = None) -> dict:
+        """
+        Retrieves a message from the logical queue.
+
+        Parameters
+        ----------
+        queue : str
+            The name of the logical queue.
+        timeout : Optional[int], optional
+            The maximum time to wait for a message, in seconds.
+
+        Returns
+        -------
+        dict
+            The retrieved message.
+
+        Raises
+        ------
+        Empty
+            If no message is available within the specified timeout.
+        """
         if self.consumer is None:
             self.consumer = ChaskiStreamerSync(
-                # port=8512,
-                name='Consumer',
+                name="ChaskiChannel Consumer",
                 subscriptions=[CHASKI_TOPIC],
-                # root=True,
                 paired=True,
             )
-            self.consumer.connect('ChaskiStreamer@127.0.0.1:65433')
-            print(f"Consumidor inicializado para el tópico {CHASKI_TOPIC}")
+            self.consumer.connect(
+                os.getenv("CHASKI_STREAMER_ROOT", "*ChaskiStreamer@127.0.0.1:65433")
+            )
 
         try:
-            print(f"Reading...")
-            incoming_message = next(self.consumer.message_stream(timeout=10))
-            print("Received message:", incoming_message)
+            incoming_message = next(self.consumer.message_stream(timeout=5))
+            message = incoming_message.data
+            message["delivery_info"] = {"routing_key": queue}
+            return message
 
-            body = json.loads(incoming_message.data['body'].decode('utf-8'))
-
-            return {
-                'body': body,  # Asegúrate de que 'body' esté en los datos
-                'properties': {
-                    'delivery_tag': 'incoming_message.delivery_tag',
-                },
-                'delivery_info': {
-                    'routing_key': queue,  # Puede ser opcional dependiendo de tu implementación
-                },
-            }
-
-        except Exception as e:
-            print(e)
+        except:
             raise Empty()
 
-        # return {
-        #     'body': "incoming_message.data['body']",
-        #     'properties': {},
-        #     'delivery_info': {},
-        # }
-
-    def close(self):
-        """"""
-        pass
-        # Cerrar el productor y el consumidor al cerrar el canal
-        # self.producer.close()
-        # if self.consumer is not None:
-        #     self.consumer.close()
+    # ----------------------------------------------------------------------
+    def close(self) -> None:
+        """
+        Closes the producer and consumer connections.
+        """
+        self.producer.close()
+        if self.consumer is not None:
+            self.consumer.close()
 
 
+########################################################################
 class ChaskiTransport(Transport):
+    """
+    A custom Kombu transport implementation using ChaskiStreamerSync.
+
+    Attributes
+    ----------
+    Channel : type
+        The channel class used by this transport.
+    default_port : int
+        The default port used by the transport.
+    """
+
     Channel = ChaskiChannel
-    default_port = 65433
 
-    def driver_version(self):
-        return 'chaski'
+    # ----------------------------------------------------------------------
+    def driver_version(self) -> str:
+        """
+        Retrieves the version of the driver.
+
+        Returns
+        -------
+        str
+            The driver version string.
+        """
+        return "chaski"
 
 
-transport.TRANSPORT_ALIASES.update(
-    {'chaski': 'chaski.utils.transport:ChaskiTransport'}
-)
+# Update Kombu transport aliases to include ChaskiTransport.
+transport.TRANSPORT_ALIASES.update({"chaski": "chaski.utils.transport:ChaskiTransport"})
