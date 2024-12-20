@@ -1,6 +1,7 @@
 import os
 import ssl
 import datetime
+from platformdirs import user_data_dir
 
 # Importing cryptography modules for X509 certificates, private key generation,
 # and serialization, including RSA key generation and PEM encoding without encryption.
@@ -19,7 +20,7 @@ class CertificateAuthority:
         self,
         id: str,
         ip_address: str,
-        ssl_certificates_location: str = '.',
+        ssl_certificates_location: str = None,
         ssl_certificate_attributes: dict = {},
     ):
         """
@@ -30,8 +31,12 @@ class CertificateAuthority:
         of SSL certificate attributes. These attributes are used for generating
         new certificates.
         """
+
         self.id = id
-        self.ssl_certificates_location = ssl_certificates_location
+        if ssl_certificates_location is None:
+            self.ssl_certificates_location = user_data_dir("chaski-confluent")
+        else:
+            self.ssl_certificates_location = ssl_certificates_location
         self.ssl_certificate_attributes = ssl_certificate_attributes
         self.ip_address = ip_address
 
@@ -54,17 +59,11 @@ class CertificateAuthority:
         IOError
             If there is an error reading or writing the key and certificate files.
         """
-        self.ca_key_path_ = os.path.join(
-            self.ssl_certificates_location, "ca.key"
-        )
-        self.ca_cert_path_ = os.path.join(
-            self.ssl_certificates_location, "ca.cert"
-        )
+        self.ca_key_path_ = os.path.join(self.ssl_certificates_location, "ca.key")
+        self.ca_cert_path_ = os.path.join(self.ssl_certificates_location, "ca.cert")
 
         # Generate CA key
-        ca_key = rsa.generate_private_key(
-            public_exponent=65537, key_size=2048
-        )
+        ca_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
 
         # Write CA key to file
         with open(self.ca_key_path_, "wb") as f:
@@ -85,9 +84,7 @@ class CertificateAuthority:
                 ),
                 x509.NameAttribute(
                     NameOID.STATE_OR_PROVINCE_NAME,
-                    self.ssl_certificate_attributes[
-                        'State or Province Name'
-                    ],
+                    self.ssl_certificate_attributes['State or Province Name'],
                 ),
                 x509.NameAttribute(
                     NameOID.LOCALITY_NAME,
@@ -115,8 +112,7 @@ class CertificateAuthority:
             .serial_number(x509.random_serial_number())
             .not_valid_before(datetime.datetime.utcnow())
             .not_valid_after(
-                datetime.datetime.utcnow()
-                + datetime.timedelta(days=365 * 10)
+                datetime.datetime.utcnow() + datetime.timedelta(days=365 * 10)
             )
             .add_extension(
                 x509.BasicConstraints(ca=True, path_length=None),
@@ -273,9 +269,7 @@ class CertificateAuthority:
             )
             # Add the subject alternative name extension with the IP address
             .add_extension(
-                x509.SubjectAlternativeName(
-                    [x509.IPAddress(self.ip_address)]
-                ),
+                x509.SubjectAlternativeName([x509.IPAddress(self.ip_address)]),
                 critical=False,
             )
             # Sign the certificate using the CA's private key with SHA256 as the hashing algorithm
@@ -341,9 +335,7 @@ class CertificateAuthority:
                         ),
                         x509.NameAttribute(
                             NameOID.STATE_OR_PROVINCE_NAME,
-                            self.ssl_certificate_attributes[
-                                'State or Province Name'
-                            ],
+                            self.ssl_certificate_attributes['State or Province Name'],
                         ),
                         x509.NameAttribute(
                             NameOID.LOCALITY_NAME,
@@ -351,9 +343,7 @@ class CertificateAuthority:
                         ),
                         x509.NameAttribute(
                             NameOID.ORGANIZATION_NAME,
-                            self.ssl_certificate_attributes[
-                                'Organization Name'
-                            ],
+                            self.ssl_certificate_attributes['Organization Name'],
                         ),
                         x509.NameAttribute(
                             NameOID.COMMON_NAME,
@@ -509,12 +499,8 @@ class CertificateAuthority:
             If the CSR path is not set.
         """
         return {
-            'client': self.certificate_paths['client'].replace(
-                '.csr', '.cert'
-            ),
-            'server': self.certificate_paths['server'].replace(
-                '.csr', '.cert'
-            ),
+            'client': self.certificate_paths['client'].replace('.csr', '.cert'),
+            'server': self.certificate_paths['server'].replace('.csr', '.cert'),
         }
 
     # ----------------------------------------------------------------------
@@ -592,34 +578,26 @@ class CertificateAuthority:
         The verification mode is set to require SSL certificates (CERT_REQUIRED).
         """
         # Create a default SSL context for the client, specifying that it's intended for server authentication
-        ssl_context_client = ssl.create_default_context(
-            ssl.Purpose.SERVER_AUTH
-        )
+        ssl_context_client = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         # Load and set the client's certificate and private key for the SSL context
         ssl_context_client.load_cert_chain(
             certfile=self.certificate_signed_paths['client'],
             keyfile=self.private_key_paths['client'],
         )
         # Load and set the Certificate Authority (CA) certificate to verify the client's server certificate
-        ssl_context_client.load_verify_locations(
-            cafile=self.ca_certificate_path
-        )
+        ssl_context_client.load_verify_locations(cafile=self.ca_certificate_path)
         # Set the verification mode of the SSL context to require SSL certificates (CERT_REQUIRED).
         ssl_context_client.verify_mode = ssl.CERT_REQUIRED
 
         # Create a default SSL context for the server, specifying that it's intended for client authentication
-        ssl_context_server = ssl.create_default_context(
-            ssl.Purpose.CLIENT_AUTH
-        )
+        ssl_context_server = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         # Load and set the server's certificate and private key for the SSL context
         ssl_context_server.load_cert_chain(
             certfile=self.certificate_signed_paths['server'],
             keyfile=self.private_key_paths['server'],
         )
         # Load and set the Certificate Authority (CA) certificate to verify the server's client certificate
-        ssl_context_server.load_verify_locations(
-            cafile=self.ca_certificate_path
-        )
+        ssl_context_server.load_verify_locations(cafile=self.ca_certificate_path)
         # Set the verification mode of the SSL context to require SSL certificates (CERT_REQUIRED).
         ssl_context_server.verify_mode = ssl.CERT_REQUIRED
 
