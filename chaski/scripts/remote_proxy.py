@@ -11,7 +11,7 @@ parser.add_argument(
     '-p',
     '--port',
     type=str,
-    default='65432',
+    default='65434',
     help='Port number to run the server on',
 )
 parser.add_argument(
