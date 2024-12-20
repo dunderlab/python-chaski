@@ -70,18 +70,15 @@ class ChaskiStreamerSync:
         The ChaskiStreamerSync instance must be closed properly using the `close` method
         to ensure that resources are released and the event loop is shut down cleanly.
         """
-
         self.loop = asyncio.new_event_loop()
 
         # This function sets the given event loop as the current event loop and starts it to run indefinitely, enabling asynchronous tasks.
         asyncio.set_event_loop(self.loop)
 
-        self.streamer = ChaskiStreamer(*args, **kwargs, run=False)
+        self.streamer = ChaskiStreamer(*args, **kwargs, run=False, sync=True)
 
         # Start a new thread that runs the event loop, allowing for asynchronous operations to occur in parallel.
-        self.thread = threading.Thread(
-            target=self._start_loop, args=(self.loop,)
-        )
+        self.thread = threading.Thread(target=self._start_loop, args=(self.loop,))
 
         self.thread.start()  # Start the thread that runs the event loop
         asyncio.run_coroutine_threadsafe(
@@ -98,9 +95,7 @@ class ChaskiStreamerSync:
         asterisk (*) to the string.
         """
         h = '*' if self.paired else ''
-        return h + self.address.replace(
-            'ChaskiStreamer', 'ChaskiStreamerSync'
-        )
+        return h + self.address.replace('ChaskiStreamer', 'ChaskiStreamerSync')
 
     # ----------------------------------------------------------------------
     def _start_loop(self, loop: asyncio.AbstractEventLoop) -> None:
@@ -194,29 +189,33 @@ class ChaskiStreamerSync:
         else:
             return object_
 
-    def get_message(self, timeout):
-        # Obtener un mensaje de 'message_queue' de forma síncrona
-        coro = self.streamer.message_queue.get()
-        future = asyncio.run_coroutine_threadsafe(coro, self.loop)
-        return future.result(timeout=timeout)
-
     # ----------------------------------------------------------------------
-    def message_stream(
-        self, timeout=None
-    ) -> typing.Generator['Message', None, None]:
-        """"""
+    def message_stream(self, timeout=None) -> typing.Generator['Message', None, None]:
+        """
+        Generator to yield messages from the streamer's message queue.
+
+        Parameters
+        ----------
+        timeout : Optional[int]
+            The maximum time to wait for a message. If not specified, the generator will block indefinitely.
+
+        Yields
+        ------
+        Message
+            The next message retrieved from the queue.
+
+        Returns
+        -------
+        None
+            If the queue times out or an exception occurs.
+        """
         while True:
             try:
-                message = self.get_message(timeout)
-                message
+                # Retrieve a message from the queue with the specified timeout.
+                yield self.streamer.message_queue.get(timeout=timeout)
             except TimeoutError:
+                # Stop iteration if the queue times out.
                 return None
-            except Exception as e:
-                continue
-
-            # if self.terminate_stream_flag:
-            #     break
-
-            yield message
-
-        # self.terminate_stream_flag = True
+            except Exception:
+                # Handle any unexpected exceptions gracefully.
+                return None
