@@ -54,14 +54,14 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
             if the connection steps fail.
         """
         server = ChaskiRemote(
-            port=65432,
+            port=65440,
             available=[],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
 
         client = ChaskiRemote(
-            port=65433,
+            port=65441,
             reconnections=None,
         )
         await client.connect(server.address)
@@ -169,12 +169,8 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.3)
 
         self.assertIsInstance(np_remote.pi._, float)
-        self.assertEqual(
-            np_remote.random.normal(0, 1, size=(2, 2)).shape, (2, 2)
-        )
-        self.assertEqual(
-            np_remote.random.normal(0, 1, size=(4, 4)).shape, (4, 4)
-        )
+        self.assertEqual(np_remote.random.normal(0, 1, size=(2, 2)).shape, (2, 2))
+        self.assertEqual(np_remote.random.normal(0, 1, size=(4, 4)).shape, (4, 4))
         self.assertAlmostEqual(np_remote.pi._, 3.141592653589793)
 
         state = np_remote.random.get_state()

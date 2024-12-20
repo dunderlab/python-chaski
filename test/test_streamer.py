@@ -138,9 +138,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             if os.path.exists(os.path.join('testdir', 'output', filename)):
                 os.remove(os.path.join('testdir', 'output', filename))
 
-            with open(
-                os.path.join('testdir', 'input', filename), 'rb'
-            ) as file:
+            with open(os.path.join('testdir', 'input', filename), 'rb') as file:
                 await producer.push_file(
                     'topicF',
                     file,
@@ -232,14 +230,14 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data at the final consumer does not match the expected values.
         """
         chain0 = ChaskiStreamer(
-            port=65432,
+            port=65440,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
         )
 
         chain1 = ChaskiStreamer(
-            port=65433,
+            port=65441,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
@@ -292,9 +290,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         async with chain5 as message_queue:
             async for incoming_message in message_queue:
 
-                self.assertEqual(
-                    f'test{count}', incoming_message.data['data']
-                )
+                self.assertEqual(f'test{count}', incoming_message.data['data'])
 
                 if count >= 5:
                     chain5.terminate_stream()
@@ -333,7 +329,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data at the final consumer does not match the expected values.
         """
         chain0 = ChaskiStreamer(
-            port=65432,
+            port=65440,
             name='Producer',
             root=True,
             paired=True,
@@ -341,14 +337,14 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         )
 
         chain1 = ChaskiStreamer(
-            port=65433,
+            port=65441,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
         )
 
         chain2 = ChaskiStreamer(
-            port=65434,
+            port=65442,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
@@ -370,9 +366,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         async with chain2 as message_queue:
             async for incoming_message in message_queue:
 
-                self.assertEqual(
-                    f'test{count}', incoming_message.data['data']
-                )
+                self.assertEqual(f'test{count}', incoming_message.data['data'])
 
                 if count >= 5:
                     chain2.terminate_stream()
