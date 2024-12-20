@@ -70,6 +70,11 @@ FAVORITE_PORTS = [
     8516,
 ]
 
+IGNORE_LOGS_FOR_COMMANDS = [
+    "ping",
+    "pong",
+]
+
 
 ########################################################################
 class MessagesPool:
@@ -283,28 +288,23 @@ class Edge:
                 100**2
             )  # Assume a fixed variance for the new measurement
             posterior_mean = (
-                prior_mean / prior_variance
-                + likelihood_mean / likelihood_variance
+                prior_mean / prior_variance + likelihood_mean / likelihood_variance
             ) / (1 / prior_variance + 1 / likelihood_variance)
-            posterior_variance = 1 / (
-                1 / prior_variance + 1 / likelihood_variance
-            )
+            posterior_variance = 1 / (1 / prior_variance + 1 / likelihood_variance)
 
             self.latency = posterior_mean
             self.jitter = (
                 posterior_variance**0.5
             )  # Take the square root to return to standard deviation.
 
-            logger_edge.debug(
-                f"Updated latency: {self.latency: .2f}, jitter: {self.jitter: .2f}."
-            )
+            # logger_edge.debug(
+            # f"Updated latency: {self.latency: .2f}, jitter: {self.jitter: .2f}."
+            # )
 
     # ----------------------------------------------------------------------
     def __eq__(self, other):
         if isinstance(other, Edge):
-            return (self.writer == other.writer) and (
-                self.reader == other.reader
-            )
+            return (self.writer == other.writer) and (self.reader == other.reader)
         return False
 
 
@@ -368,9 +368,7 @@ class UDPProtocol(asyncio.DatagramProtocol):
     on_message_received: Awaitable
 
     # ----------------------------------------------------------------------
-    def datagram_received(
-        self, message: bytes, addr: tuple[str, int]
-    ) -> None:
+    def datagram_received(self, message: bytes, addr: tuple[str, int]) -> None:
         """
         Handle incoming datagram messages and dispatch them for processing.
 
@@ -604,9 +602,7 @@ class ChaskiNode:
         # Request an SSL certificate for secure communication if specified
         if request_ssl_certificate:
             asyncio.sleep(1)
-            asyncio.create_task(
-                self.request_ssl_certificate(request_ssl_certificate)
-            )
+            asyncio.create_task(self.request_ssl_certificate(request_ssl_certificate))
 
     #             if os.path.exists(self.ssl_context_client,
     #                               self.ssl_context_server)
@@ -628,9 +624,7 @@ class ChaskiNode:
         return f"{h}ChaskiNode@{self.ip}:{self.port}"
 
     # ----------------------------------------------------------------------
-    def subscribe(
-        self, subscriptions: List[str], paired: bool = False
-    ) -> None:
+    def subscribe(self, subscriptions: List[str], paired: bool = False) -> None:
         """
         Subscribe the node to specified topics.
 
@@ -732,9 +726,7 @@ class ChaskiNode:
         This coroutine starts the TCP and UDP server tasks to listen for incoming connections and handle UDP datagrams. It is an essential part of the node's operation, enabling it to accept connections from other nodes and exchange messages over the network.
         """
         self.server_closing = False
-        await asyncio.gather(
-            self._start_tcp_server(), self._start_udp_server()
-        )
+        await asyncio.gather(self._start_tcp_server(), self._start_udp_server())
 
     # ----------------------------------------------------------------------
     async def stop(self) -> None:
@@ -807,12 +799,9 @@ class ChaskiNode:
 
         # Check if a connection to the peer ip and port already exists
         if (peer_ip, peer_port, False) in [
-            (edge.ip, edge.port, edge.writer.is_closing())
-            for edge in self.edges
+            (edge.ip, edge.port, edge.writer.is_closing()) for edge in self.edges
         ]:
-            logger_main.warning(
-                f"{self.name}: Already connected with this node."
-            )
+            logger_main.warning(f"{self.name}: Already connected with this node.")
             return self.get_edge(peer_ip, peer_port)
 
         # Resolve address info for the specified ip and port
@@ -844,9 +833,7 @@ class ChaskiNode:
             )
 
         # Log new connection
-        logger_main.debug(
-            f"{self.name}: New connection with {edge.address}."
-        )
+        logger_main.debug(f"{self.name}: New connection with {edge.address}.")
         asyncio.create_task(self._reader_loop(edge))
         await self.handshake(edge, response=True)
         # await self.ping(edge)
@@ -891,9 +878,7 @@ class ChaskiNode:
             representing a specific type of message that can be propagated to other nodes.
         """
         self.propagation_command_list.append(command)
-        self.propagation_command_list = list(
-            set(self.propagation_command_list)
-        )
+        self.propagation_command_list = list(set(self.propagation_command_list))
 
     # ----------------------------------------------------------------------
     def remove_propagation_command(self, command: str) -> None:
@@ -990,9 +975,7 @@ class ChaskiNode:
 
         # Check if there are no edges present
         if not self.edges:
-            logger_main.warning(
-                f"{self.name}: No connection to perform discovery."
-            )
+            logger_main.warning(f"{self.name}: No connection to perform discovery.")
             return
 
         # Check if the node is not provided and there are no edges
@@ -1055,9 +1038,7 @@ class ChaskiNode:
             self.paired_event[subscription].set()
 
     # ----------------------------------------------------------------------
-    async def close_connection(
-        self, edge: Edge, port: Optional[int] = None
-    ) -> None:
+    async def close_connection(self, edge: Edge, port: Optional[int] = None) -> None:
         """
         Close the connection associated with a given edge, optionally specifying a port.
 
@@ -1100,9 +1081,7 @@ class ChaskiNode:
             logger_main.debug(
                 f"{self.name}: The connection with {edge} will be removed."
             )
-            logger_main.debug(
-                f"{self.name}: Closing connection to {edge.address}."
-            )
+            logger_main.debug(f"{self.name}: Closing connection to {edge.address}.")
 
             # Closing the writer stream if it is not already closing
             if not edge.writer.is_closing():
@@ -1192,9 +1171,7 @@ class ChaskiNode:
         logger_main.debug(
             f"{self.name}: Accepted connection from {writer.get_extra_info('peername')}."
         )
-        logger_main.debug(
-            f"{self.name}: New connection with {edge.address}."
-        )
+        logger_main.debug(f"{self.name}: New connection with {edge.address}.")
         asyncio.create_task(self._reader_loop(edge))
 
         # # If there are no edges (connections) yet, designate this node as the root node
@@ -1203,12 +1180,9 @@ class ChaskiNode:
 
         # Check if a connection to the peer ip and port already exists
         if (edge.ip, edge.port, False) in [
-            (edge_.ip, edge_.port, edge_.writer.is_closing())
-            for edge_ in self.edges
+            (edge_.ip, edge_.port, edge_.writer.is_closing()) for edge_ in self.edges
         ]:
-            logger_main.debug(
-                f"{self.name}: Already connected with this node."
-            )
+            logger_main.debug(f"{self.name}: Already connected with this node.")
             await self.close_connection(edge)
             return
 
@@ -1246,38 +1220,29 @@ class ChaskiNode:
                     continue
 
                 # Convert the first 4 bytes to integer representing data length and topic length in bytes
-                length_data = int.from_bytes(
-                    length_data_bin, byteorder="big"
-                )
-                length_topic = int.from_bytes(
-                    length_topic_bin, byteorder="big"
-                )
+                length_data = int.from_bytes(length_data_bin, byteorder="big")
+                length_topic = int.from_bytes(length_topic_bin, byteorder="big")
 
                 # Read the topic from the edge reader exactly matching the topic length
                 topic = await edge.reader.readexactly(length_topic)
 
                 topic = self.deserializer(topic)
                 # Check if the topic is "All" or if the topic is in the node's subscriptions
-                if (
-                    (topic == "All")
-                    or (topic in self.subscriptions)
-                    or self.root
-                ):
+                if (topic == "All") or (topic in self.subscriptions) or self.root:
                     data = await edge.reader.readexactly(length_data)
                     # Deserialize the received data into a message object
                     message = self.deserializer(data)
-                    logger_main.debug(
-                        f"{self.name}: Received a message of size {length_data} bytes."
-                    )
+                    if message.command not in IGNORE_LOGS_FOR_COMMANDS:
+                        logger_main.debug(
+                            f"{self.name}: Received a message of size {length_data} bytes."
+                        )
 
                     # Check if the command in the message should be propagated
                     if message.command in self.propagation_command_list:
 
                         if (  # If the message propagation is enabled and the message hasn't been processed already, propagate the message.
                             self.message_propagation
-                            and not await self.messages_pool.contains(
-                                message.uuid
-                            )
+                            and not await self.messages_pool.contains(message.uuid)
                         ):
                             # Propagate the received message if it meets the criteria and is not already in the message pool
                             async with self.lock_propagate:
@@ -1330,9 +1295,7 @@ class ChaskiNode:
             await self.close_connection(edge)
 
             # Attempting to reconnect with the edge after a connection loss
-            logger_main.debug(
-                f"{self.name}: attempting to reconnect with {edge}"
-            )
+            logger_main.debug(f"{self.name}: attempting to reconnect with {edge}")
             await self.try_to_reconnect(edge)
 
     # ----------------------------------------------------------------------
@@ -1354,9 +1317,10 @@ class ChaskiNode:
         """
         if processor := getattr(self, f"_process_{message.command}", None):
             # Process the received message command
-            logger_main.debug(
-                f"{self.name}: Processing the '{message.command}' command."
-            )
+            if message.command not in IGNORE_LOGS_FOR_COMMANDS:
+                logger_main.debug(
+                    f"{self.name}: Processing the '{message.command}' command."
+                )
             await processor(message, edge)
         else:
             logger_main.warning(
@@ -1364,9 +1328,7 @@ class ChaskiNode:
             )
 
     # ----------------------------------------------------------------------
-    async def _process_report_paired(
-        self, message: Message, edge: Edge
-    ) -> None:
+    async def _process_report_paired(self, message: Message, edge: Edge) -> None:
         """
         Process a 'report_paired' network message.
 
@@ -1575,7 +1537,6 @@ class ChaskiNode:
         self,
         server_edge: Optional[Edge] = None,
         size: int = 0,
-        repeat: int = 30,
     ) -> None:
         """
         Send ping messages to one or all connected edges.
@@ -1593,16 +1554,16 @@ class ChaskiNode:
         size : int, optional
             The size of the dummy data to be sent with the ping message in bytes. This
             allows simulating payload sizes and their effect on latency. Defaults to 0.
-        repeat : int, optional
-            The number of ping messages to send. This can be used to perform repeated latency
-            tests. Defaults to 30.
         """
-        for _ in range(repeat):
-            if server_edge is None:
-                for edge in self.edges:
-                    await self._ping(edge, size=size)
-            else:
-                await self._ping(server_edge, size=size)
+        for id_ in self.ping_events.copy():
+            edge = self.ping_events.pop(id_)
+            await self.close_connection(edge)
+
+        if server_edge is None:
+            for edge in self.edges:
+                await self._ping(edge, size=size)
+        else:
+            await self._ping(server_edge, size=size)
 
     # ----------------------------------------------------------------------
     async def _ping(
@@ -1701,9 +1662,7 @@ class ChaskiNode:
         server_edge = self.ping_events.pop(message.data["ping_id"])
         if message.data["latency_update"]:
             server_edge.update_latency(
-                (
-                    datetime.now() - message.data["source_timestamp"]
-                ).total_seconds()
+                (datetime.now() - message.data["source_timestamp"]).total_seconds()
                 * 500
             )
 
@@ -1789,9 +1748,7 @@ class ChaskiNode:
         await self._write(command="handshake_back", data=data, edge=edge)
 
     # ----------------------------------------------------------------------
-    async def _process_handshake_back(
-        self, message: Message, edge: Edge
-    ) -> None:
+    async def _process_handshake_back(self, message: Message, edge: Edge) -> None:
         """
         Handle a handshake response (back) from a peer node after an initial handshake.
 
@@ -1867,9 +1824,7 @@ class ChaskiNode:
 
         # Check if TTL (Time-to-Live) has reached zero
         if message.data["ttl"] == 0:
-            logger_main.debug(
-                f"{self.name}: Discovery time-to-live (TTL) reached 0."
-            )
+            logger_main.debug(f"{self.name}: Discovery time-to-live (TTL) reached 0.")
             return
 
         # Check if the node can accommodate more edges and the subscription matches
@@ -1925,9 +1880,7 @@ class ChaskiNode:
 
         n = len(self.edges)
         async with self.lock:
-            self.edges = [
-                edge for edge in self.edges if not edge.writer.is_closing()
-            ]
+            self.edges = [edge for edge in self.edges if not edge.writer.is_closing()]
         logger_main.debug(
             f"{self.name}: Removed a closing connection, {n - len(self.edges)} total edges disconnected."
         )
@@ -1994,16 +1947,12 @@ class ChaskiNode:
         dest_port : int
             The port number on the destination host to which the message should be directed.
         """
-        message = Message(
-            command=command, data=message, timestamp=datetime.now()
-        )
+        message = Message(command=command, data=message, timestamp=datetime.now())
         data = self.serializer(message)
         self.udp_transport.sendto(data, (dest_ip, dest_port))
 
     # ----------------------------------------------------------------------
-    async def _process_udp_message(
-        self, data: bytes, addr: Tuple[str, int]
-    ) -> None:
+    async def _process_udp_message(self, data: bytes, addr: Tuple[str, int]) -> None:
         """
         Process incoming UDP messages routed to this node's UDP server.
 
@@ -2028,26 +1977,19 @@ class ChaskiNode:
         """
         message = self.deserializer(data)
 
-        # Process the "status" command received via UDP
-        match message.command:
+        if message.command == "status":
+            data = self._get_status(id=message.data["id"])
+            await self._send_udp_message("response", data, *addr[:2])
 
-            # Process the "status" command received via UDP
-            case "status":
-                data = self._get_status(id=message.data["id"])
-                await self._send_udp_message("response", data, *addr[:2])
+        elif processor := getattr(self, f'_process_udp_{message.command}', None):
+            processor(message)
 
-            # Process the "response" command
-            case "response":
-                self.request_response_multiplexer[message.data["id"]] = (
-                    message
-                )
-                if (
-                    message.data["id"]
-                    in self.request_response_multiplexer_events
-                ):
-                    self.request_response_multiplexer_events[
-                        message.data["id"]
-                    ].set()
+    # ----------------------------------------------------------------------
+    def _process_udp_response(self, message):
+        """"""
+        self.request_response_multiplexer[message.data["id"]] = message
+        if message.data["id"] in self.request_response_multiplexer_events:
+            self.request_response_multiplexer_events[message.data["id"]].set()
 
     # ----------------------------------------------------------------------
     async def _request_status(self, dest_ip: str, dest_port: int) -> Message:
@@ -2129,7 +2071,26 @@ class ChaskiNode:
 
     # ----------------------------------------------------------------------
     async def _keep_alive(self, interval: int = 7) -> None:
-        """"""
+        """
+        Keep the node alive by sending periodic heartbeat messages.
+
+        This coroutine sends a heartbeat message at defined intervals
+        to ensure that the connection remains active. It is useful for
+        preventing timeouts and maintaining the session state.
+
+        Parameters
+        ----------
+        interval : int
+            The number of seconds between each heartbeat message.
+        """
+        logger_main.info(f"Starting keep-alive with an interval of {interval} seconds.")
+
+        while True:
+            await self.ping()
+            logger_main.debug(f"Active connections: {len(self.edges)}")
+            for i, edge in enumerate(self.edges):
+                logger_main.debug(f"Edge {i + 1}: {edge}")
+            await asyncio.sleep(interval)
         return
 
     # ----------------------------------------------------------------------
@@ -2181,9 +2142,7 @@ class ChaskiNode:
             `True` if the current node is connected to the specified node; otherwise, `False`.
 
         """
-        return (node.ip, node.port) in [
-            (edge.ip, edge.port) for edge in self.edges
-        ]
+        return (node.ip, node.port) in [(edge.ip, edge.port) for edge in self.edges]
 
     # ----------------------------------------------------------------------
     def _get_status(self, **kwargs) -> dict:
@@ -2215,8 +2174,7 @@ class ChaskiNode:
             "name": self.name,
             # Get the status of paired events for each subscription
             "paired": {
-                sub: self.paired_event[sub].is_set()
-                for sub in self.subscriptions
+                sub: self.paired_event[sub].is_set() for sub in self.subscriptions
             },
             # Check if the server is closing; 'True' means it's still serving.
             "serving": not self.server_closing,
@@ -2362,9 +2320,7 @@ class ChaskiNode:
         bool
             `True` if the node is paired for all subscriptions, otherwise `False`.
         """
-        return all(
-            [self.paired_event[sub].is_set() for sub in self.subscriptions]
-        )
+        return all([self.paired_event[sub].is_set() for sub in self.subscriptions])
 
     # ----------------------------------------------------------------------
     async def _generic_request_udp(
@@ -2428,9 +2384,7 @@ class ChaskiNode:
         return response
 
     # ----------------------------------------------------------------------
-    async def _process_response_udp(
-        self, message: Message, edge: Edge
-    ) -> None:
+    async def _process_response_udp(self, message: Message, edge: Edge) -> None:
         """
         Process a response to a UDP request.
 
@@ -2457,9 +2411,7 @@ class ChaskiNode:
         await asyncio.sleep(0)
 
     # ----------------------------------------------------------------------
-    async def _process_request_udp(
-        self, message: Message, edge: Edge
-    ) -> None:
+    async def _process_request_udp(self, message: Message, edge: Edge) -> None:
         """
         Process an incoming UDP request and dispatch a response.
 
@@ -2477,16 +2429,12 @@ class ChaskiNode:
         data = message.data
 
         # Execute the callback method specified in the request data and store its result in the response field.
-        data['response'] = await getattr(self, data['callback'])(
-            **data['kwargs']
-        )
+        data['response'] = await getattr(self, data['callback'])(**data['kwargs'])
 
         await self._write('response_udp', data, edge)
 
     # ----------------------------------------------------------------------
-    async def _test_generic_request_udp(
-        self, echo_data: dict[str, Any] = {}
-    ) -> Any:
+    async def _test_generic_request_udp(self, echo_data: dict[str, Any] = {}) -> Any:
         """
         Send a test UDP request and await the response.
 
@@ -2503,9 +2451,7 @@ class ChaskiNode:
         Any
             The response data received from the peer node.
         """
-        return await self._generic_request_udp(
-            '_test_generic_response_udp', echo_data
-        )
+        return await self._generic_request_udp('_test_generic_response_udp', echo_data)
 
     # ----------------------------------------------------------------------
     async def _test_generic_response_udp(self, **echo_data: Any) -> Any:
@@ -2636,9 +2582,7 @@ class ChaskiNode:
         try:
             ca_edge = await self.connect(ca_address)
         except:
-            raise Exception(
-                "The Certification Authority is not operational."
-            )
+            raise Exception("The Certification Authority is not operational.")
 
         # Prepare the data for the Certificate Signing Request (CSR) including
         # the CSR data and the node's unique identifier (node_id). Then,
@@ -2658,16 +2602,10 @@ class ChaskiNode:
         signed_csr_server = data_response['signed_csr_server']
         ca_certificate_path = data_response['ca_certificate_path']
 
-        ca.ca_certificate_path = os.path.join(
-            ca.ssl_certificates_location, 'ca.cert'
-        )
+        ca.ca_certificate_path = os.path.join(ca.ssl_certificates_location, 'ca.cert')
         # Write the signed certificate and the CA's certificate to their respective paths.
-        ca.write_certificate(
-            ca.certificate_signed_paths['client'], signed_csr_client
-        )
-        ca.write_certificate(
-            ca.certificate_signed_paths['server'], signed_csr_server
-        )
+        ca.write_certificate(ca.certificate_signed_paths['client'], signed_csr_client)
+        ca.write_certificate(ca.certificate_signed_paths['server'], signed_csr_server)
         ca.write_certificate(ca.ca_certificate_path, ca_certificate_path)
 
         logger_main.debug(
