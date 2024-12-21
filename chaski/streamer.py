@@ -516,7 +516,7 @@ class ChaskiStreamer(ChaskiNode):
         value : Any
             The value to be stored.
         """
-        self.persistent_storage[id_] = value
+        self.persistent_storage.set(id_, value)
 
     # ----------------------------------------------------------------------
     async def fetch_storage(self, id_: str) -> None:
