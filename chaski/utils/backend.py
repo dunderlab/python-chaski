@@ -26,7 +26,7 @@ class ChaskiBackend(BaseBackend):
         self._results: Dict[str, Any] = {}
 
         self.storage = ChaskiStreamerSync(
-            name="Storage Streamer - GET",
+            name="Storage Streamer",
             subscriptions=["storage"],
             paired=True,
             persistent_storage=True,
