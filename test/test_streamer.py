@@ -170,7 +170,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         """
 
         producer = ChaskiStreamer(
-            port=8515,
+            # port=8515,
             name='Producer',
             subscriptions=['topicF'],
             reconnections=None,
@@ -181,7 +181,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         )
 
         consumer = ChaskiStreamer(
-            port=8516,
+            # port=8516,
             name='Consumer',
             subscriptions=['topicF'],
             reconnections=None,
@@ -230,42 +230,42 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data at the final consumer does not match the expected values.
         """
         chain0 = ChaskiStreamer(
-            port=65440,
+            # port=65440,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
         )
 
         chain1 = ChaskiStreamer(
-            port=65441,
+            # port=65441,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
         )
 
         chain2 = ChaskiStreamer(
-            port=65434,
+            # port=65434,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
         )
 
         chain3 = ChaskiStreamer(
-            port=65435,
+            # port=65435,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
         )
 
         chain4 = ChaskiStreamer(
-            port=65436,
+            # port=65436,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
         )
 
         chain5 = ChaskiStreamer(
-            port=65437,
+            # port=65437,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
@@ -294,6 +294,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
                 if count >= 5:
                     chain5.terminate_stream()
+                    break
 
                 count += 1
                 await chain0.push(
@@ -329,23 +330,23 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data at the final consumer does not match the expected values.
         """
         chain0 = ChaskiStreamer(
-            port=65440,
-            name='Producer',
+            # port=65440,
+            name='Producer 1',
             root=True,
             paired=True,
             reconnections=None,
         )
 
         chain1 = ChaskiStreamer(
-            port=65441,
-            name='Producer',
+            # port=65441,
+            name='Producer 2',
             subscriptions=['topic1'],
             reconnections=None,
         )
 
         chain2 = ChaskiStreamer(
-            port=65442,
-            name='Producer',
+            # port=65442,
+            name='Producer 3',
             subscriptions=['topic1'],
             reconnections=None,
         )
@@ -370,6 +371,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
                 if count >= 5:
                     chain2.terminate_stream()
+                    break
 
                 count += 1
                 await chain0.push(
@@ -380,9 +382,9 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
                 )
 
         await asyncio.sleep(1)
-        await chain0.stop()
         await chain1.stop()
         await chain2.stop()
+        await chain0.stop()
 
 
 if __name__ == '__main__':

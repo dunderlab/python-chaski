@@ -198,37 +198,37 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         instances are correctly set up to allow secure communication between
         producer and consumer nodes.
         """
-        uuid1 = '3cb580e3-bdd0-4ad8-b535-1aab47b14b28'
-        uuid2 = '422f15aa-611d-46d2-b18d-f6c117b8682c'
+        uuid1 = '414c5aef-a2dd-4b49-ad57-13a5c156c0af'
+        uuid2 = 'ba0e12cc-8806-46da-ab0f-8eb7177c106a'
 
         # Configure the server SSL context for client authentication,
         # load the server's certificate and key, and set up the CA certificate for verification.
         server_ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         server_ssl_context.load_cert_chain(
-            certfile=f'certs/server_{uuid1}.cert',
-            keyfile=f'certs/server_{uuid1}.key',
+            certfile=f'certs_ca/server_{uuid1}.cert',
+            keyfile=f'certs_ca/server_{uuid1}.key',
         )
-        server_ssl_context.load_verify_locations(cafile='certs/ca.cert')
+        server_ssl_context.load_verify_locations(cafile='certs_ca/ca.cert')
         server_ssl_context.verify_mode = ssl.CERT_REQUIRED
 
         # Configure the client SSL context for server authentication,
         # load the client's certificate and key, and set up the CA certificate for verification.
         client_ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         client_ssl_context.load_cert_chain(
-            certfile=f'certs/client_{uuid1}.cert',
-            keyfile=f'certs/client_{uuid1}.key',
+            certfile=f'certs_ca/client_{uuid1}.cert',
+            keyfile=f'certs_ca/client_{uuid1}.key',
         )
-        client_ssl_context.load_verify_locations(cafile='certs/ca.cert')
+        client_ssl_context.load_verify_locations(cafile='certs_ca/ca.cert')
         client_ssl_context.verify_mode = ssl.CERT_REQUIRED
 
         # Initialize the ChaskiStreamer instance for the producer, configuring SSL contexts
         # for secure communication, subscriptions, and other parameters.
         producer = ChaskiStreamer(
-            port=65433,
+            # port=65433,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
-            ssl_certificates_location='certs',
+            ssl_certificates_location='certs_ca',
             ssl_context_server=server_ssl_context,
             ssl_context_client=client_ssl_context,
         )
@@ -237,30 +237,30 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         # load the second server's certificate and key, and set up the CA certificate for verification.
         server_ssl_context2 = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         server_ssl_context2.load_cert_chain(
-            certfile=f'certs/server_{uuid2}.cert',
-            keyfile=f'certs/server_{uuid2}.key',
+            certfile=f'certs_ca/server_{uuid2}.cert',
+            keyfile=f'certs_ca/server_{uuid2}.key',
         )
-        server_ssl_context2.load_verify_locations(cafile='certs/ca.cert')
+        server_ssl_context2.load_verify_locations(cafile='certs_ca/ca.cert')
         server_ssl_context2.verify_mode = ssl.CERT_REQUIRED
 
         # Configure the second client SSL context for server authentication,
         # load the client's certificate and key, and set up the CA certificate for verification.
         client_ssl_context2 = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         client_ssl_context2.load_cert_chain(
-            certfile=f'certs/client_{uuid2}.cert',
-            keyfile=f'certs/client_{uuid2}.key',
+            certfile=f'certs_ca/client_{uuid2}.cert',
+            keyfile=f'certs_ca/client_{uuid2}.key',
         )
-        client_ssl_context2.load_verify_locations(cafile='certs/ca.cert')
+        client_ssl_context2.load_verify_locations(cafile='certs_ca/ca.cert')
         client_ssl_context2.verify_mode = ssl.CERT_REQUIRED
 
         # Initialize the ChaskiStreamer instance for the consumer, configuring SSL contexts
         # for secure communication, subscriptions, and other parameters.
         consumer = ChaskiStreamer(
-            port=65434,
+            # port=65434,
             name='Consumer',
             subscriptions=['topic1'],
             reconnections=None,
-            ssl_certificates_location='certs',
+            ssl_certificates_location='certs_ca',
             ssl_context_server=server_ssl_context2,
             ssl_context_client=client_ssl_context2,
         )
@@ -293,7 +293,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         communication channels.
         """
         producer = ChaskiStreamer(
-            port=65433,
+            # port=65433,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
@@ -301,7 +301,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         )
 
         consumer = ChaskiStreamer(
-            port=65434,
+            # port=65434,
             name='Consumer',
             subscriptions=['topic1'],
             reconnections=None,
