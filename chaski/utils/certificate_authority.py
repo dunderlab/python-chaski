@@ -34,9 +34,13 @@ class CertificateAuthority:
 
         self.id = id
         if ssl_certificates_location is None:
-            self.ssl_certificates_location = user_data_dir("chaski-confluent")
+            self.ssl_certificates_location = os.path.join(
+                user_data_dir("chaski-confluent"), 'certs'
+            )
         else:
             self.ssl_certificates_location = ssl_certificates_location
+
+        os.makedirs(self.ssl_certificates_location, exist_ok=True)
         self.ssl_certificate_attributes = ssl_certificate_attributes
         self.ip_address = ip_address
 

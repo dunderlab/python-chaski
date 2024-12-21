@@ -32,6 +32,7 @@ import ipaddress
 import traceback
 from datetime import datetime
 from functools import cached_property
+from platformdirs import user_data_dir
 from dataclasses import dataclass, field
 from typing import (
     Any,
@@ -52,7 +53,6 @@ except ImportError as e:
     logging.warning(f"Failed to import CertificateAuthority: {e}")
 
 from chaski.utils.debug import styled_logger
-
 
 # Initialize loggers for the main node operations, edge connections, and UDP protocol
 logger_main = styled_logger(logging.getLogger("ChaskiNode"))
@@ -453,7 +453,7 @@ class ChaskiNode:
         ssl_context_client: Optional[ssl.SSLContext] = None,
         ssl_context_server: Optional[ssl.SSLContext] = None,
         ssl_certificate_attributes: Optional[dict] = {},
-        ssl_certificates_location: Optional[str] = '.',
+        ssl_certificates_location: Optional[str] = None,
         request_ssl_certificate: Optional[str] = None,
     ) -> None:
         """
@@ -538,16 +538,17 @@ class ChaskiNode:
         self.message_propagation = message_propagation
         self.ssl_context_client = ssl_context_client
         self.ssl_context_server = ssl_context_server
-        self.ssl_certificates_location = ssl_certificates_location
 
-        # If root and no specific port is set, select one from favorite ports that is available
-        if root and not self.port:
-            for port in FAVORITE_PORTS:
-                if self.is_port_available(port):
-                    self.port = port
+        if ssl_certificates_location is None:
+            self.ssl_certificates_location = os.path.join(
+                user_data_dir("chaski-confluent"), 'certs'
+            )
+        else:
+            self.ssl_certificates_location = ssl_certificates_location
+        os.makedirs(self.ssl_certificates_location, exist_ok=True)
 
         # If port is 0, dynamically assign a free port
-        elif self.port == 0:
+        if self.port == 0:
             self.port = self.get_free_port()
 
         # Convert subscriptions to a set if provided as a string
@@ -753,10 +754,10 @@ class ChaskiNode:
             self._keep_alive_task.cancel()
 
         # Attempt to gracefully shut down the server if it exists
-        if hasattr(self, 'server'):
-            self.server.close()
+        if server := getattr(self, 'server', None):
+            server.close()
             try:
-                await asyncio.wait_for(self.server.wait_closed(), timeout=5)
+                await asyncio.wait_for(server.wait_closed(), timeout=5)
             except asyncio.TimeoutError:
                 logger_main.warning("Timeout waiting for server to close.")
 
