@@ -6,8 +6,7 @@ sys.path.append('../../')
 from chaski.utils import transport
 from chaski.utils import backend
 
-
-# Configuración de la aplicación Celery
+# Initialize the Celery application for task management
 app = Celery(
     'test',
     broker=os.getenv("CHASKI_CELERY_BROKER", 'chaski://127.0.0.1:65433'),
@@ -15,7 +14,7 @@ app = Celery(
 )
 
 
-# Definición de una tarea simple
+# Define a task to add two numbers
 @app.task
 def add(x, y):
     return x + y
