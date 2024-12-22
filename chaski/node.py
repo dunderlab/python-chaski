@@ -24,6 +24,7 @@ import re
 import ssl
 import uuid
 import time
+import random
 import pickle
 import asyncio
 import logging
@@ -2091,7 +2092,8 @@ class ChaskiNode:
             logger_main.debug(f"Active connections: {len(self.edges)}")
             for i, edge in enumerate(self.edges):
                 logger_main.debug(f"Edge {i + 1}: {edge}")
-            await asyncio.sleep(interval)
+            mod = 1 + random.random() * 0.5
+            await asyncio.sleep(interval * mod)
         return
 
     # ----------------------------------------------------------------------
