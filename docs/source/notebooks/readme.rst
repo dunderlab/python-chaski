@@ -51,10 +51,10 @@ method invocation, position **Chaski-Confluent** as a powerful tool for
 developing modern distributed systems.
 
 .. |GitHub top language| image:: https://img.shields.io/github/languages/top/dunderlab/python-chaski
-.. |PyPI - License| image:: https://img.shields.io/pypi/l/chaski
-.. |PyPI| image:: https://img.shields.io/pypi/v/chaski
-.. |PyPI - Status| image:: https://img.shields.io/pypi/status/chaski
-.. |PyPI - Python Version| image:: https://img.shields.io/pypi/pyversions/chaski
+.. |PyPI - License| image:: https://img.shields.io/pypi/l/chaski-confluent
+.. |PyPI| image:: https://img.shields.io/pypi/v/chaski-confluent
+.. |PyPI - Status| image:: https://img.shields.io/pypi/status/chaski-confluent
+.. |PyPI - Python Version| image:: https://img.shields.io/pypi/pyversions/chaski-confluent
 .. |GitHub last commit| image:: https://img.shields.io/github/last-commit/dunderlab/python-chaski
 .. |CodeFactor Grade| image:: https://img.shields.io/codefactor/grade/github/dunderlab/python-chaski
 .. |Documentation Status| image:: https://readthedocs.org/projects/chaski-confluent/badge/?version=latest

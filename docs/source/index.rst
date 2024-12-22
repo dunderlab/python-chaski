@@ -14,6 +14,9 @@ Documentation Overview
    notebooks/02-chaski_streamer.ptc
    notebooks/03-chaski_remote.ptc
    notebooks/04-certification_authority
+   notebooks/05-celery
+   notebooks/91-scripts
+   notebooks/92-env
 
 
 

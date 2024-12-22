@@ -15,10 +15,10 @@ topics, and extends functionality with remote interactions, ensuring resilience 
 flexibility in complex network topologies.
 
 ![GitHub top language](https://img.shields.io/github/languages/top/dunderlab/python-chaski)
-![PyPI - License](https://img.shields.io/pypi/l/chaski)
-![PyPI](https://img.shields.io/pypi/v/chaski)
-![PyPI - Status](https://img.shields.io/pypi/status/chaski)
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/chaski)
+![PyPI - License](https://img.shields.io/pypi/l/chaski-confluent)
+![PyPI](https://img.shields.io/pypi/v/chaski-confluent)
+![PyPI - Status](https://img.shields.io/pypi/status/chaski-confluent)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/chaski-confluent)
 ![GitHub last commit](https://img.shields.io/github/last-commit/dunderlab/python-chaski)
 ![CodeFactor Grade](https://img.shields.io/codefactor/grade/github/dunderlab/python-chaski)
 [![Documentation Status](https://readthedocs.org/projects/chaski-confluent/badge/?version=latest)](https://chaski-confluent.readthedocs.io/en/latest/?badge=latest)
