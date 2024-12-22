@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chaski-confluent"
-version = "0.1a5"
+version = "0.1a6"
 description = "Chaski Confluent"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -43,15 +43,21 @@ where = ["."]
 include = ["chaski"]
 [project.optional-dependencies]
 dev = [
-    "networkx",
-    "matplotlib",
     "colorama",
     ]
-docs = []
+docs = [
+    "networkx",
+    "matplotlib",
+]
 
 security = [
     "cryptography"
 ]
+
+testing = [
+    "pytest",
+]
+
 
 [project.scripts]
 chaski_certificate_authority = "chaski.scripts.certificate_authority:main"
