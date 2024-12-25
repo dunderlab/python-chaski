@@ -346,7 +346,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         requesting SSL certificates from the CA and use them successfully for secure communications.
         """
         producer = ChaskiStreamer(
-            port=65433,
+            # port=65433,
             name='Producer',
             subscriptions=['topic1'],
             reconnections=None,
@@ -357,7 +357,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         )
 
         consumer = ChaskiStreamer(
-            port=65434,
+            # port=65434,
             name='Consumer',
             subscriptions=['topic1'],
             reconnections=None,

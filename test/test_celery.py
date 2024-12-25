@@ -6,7 +6,7 @@ sys.path.append('tasks')
 
 ########################################################################
 class TestCelery(unittest.IsolatedAsyncioTestCase):
-    """Prueba unitaria para Celery con worker."""
+    """"""
 
     # ----------------------------------------------------------------------
     async def test_task(self):
