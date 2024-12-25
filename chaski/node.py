@@ -31,6 +31,7 @@ import logging
 import socket
 import ipaddress
 import traceback
+from copy import copy
 from datetime import datetime
 from functools import cached_property
 from platformdirs import user_data_dir
@@ -75,6 +76,8 @@ IGNORE_LOGS_FOR_COMMANDS = [
     "ping",
     "pong",
 ]
+
+# CHAIN_SUBSCRIPTION = '_CHAIN_'
 
 
 ########################################################################
@@ -212,7 +215,7 @@ class Edge:
             like name, latency (in milliseconds), jitter (in milliseconds),
             IP, and port.
         """
-        return f"{self.name}: N({self.latency: .0f}, {self.jitter: .0f}) {self.ip}: {self.port}"
+        return f"{self.name}: N({self.latency: .0f}, {self.jitter: .0f}) {self.ip}:{self.port}"
 
     # ----------------------------------------------------------------------
     @cached_property
@@ -556,11 +559,11 @@ class ChaskiNode:
         if isinstance(subscriptions, str):
             self.subscriptions = set([subscriptions])
         elif subscriptions is None:
-            self.subscriptions = []
+            self.subscriptions = self([])
         else:
             self.subscriptions = set(subscriptions)
 
-        # Initialize asyncio locks for concurrency control
+        # Initialize syncio locks for concurrency control
         self.lock = asyncio.Lock()
         self.lock_pair = asyncio.Lock()
         self.lock_disconnect = asyncio.Lock()
@@ -575,8 +578,12 @@ class ChaskiNode:
         self.reconnecting = asyncio.Event()
 
         # Initialize paired_event dictionary with asyncio Events for each subscription
+        if root:
+            paired = True
+            self.subscriptions.add('@')
+
         self.paired_event = {}
-        for subscription in subscriptions:
+        for subscription in self.subscriptions:
             self.paired_event[subscription] = asyncio.Event()
             if paired:
                 self.paired_event[subscription].set()
@@ -655,7 +662,7 @@ class ChaskiNode:
         for subscription in subscriptions:
             if subscription in self.subscriptions:
                 continue
-            self.subscriptions.append(subscription)
+            self.subscriptions.add(subscription)
             self.paired_event[subscription] = asyncio.Event()
             if paired:
                 self.paired_event[subscription].set()
@@ -838,7 +845,6 @@ class ChaskiNode:
         logger_main.debug(f"{self.name}: New connection with {edge.address}.")
         asyncio.create_task(self._reader_loop(edge))
         await self.handshake(edge, response=True)
-        # await self.ping(edge)
         return edge
 
     # ----------------------------------------------------------------------
@@ -907,6 +913,8 @@ class ChaskiNode:
         self,
         address_or_ip_or_node: Union[str, 'ChaskiNode'],
         port: Optional[int] = None,
+        discovery=False,
+        discovery_timeout=0.5,
     ) -> None:
         """
         Establish a connection to the specified node or address.
@@ -944,7 +952,16 @@ class ChaskiNode:
             ipv4, ipv6, port = re.findall(pattern, address_or_ip_or_node)[0]
             ip = ipv4 + ipv6
 
-        return await self._connect_to_peer(ip, port)
+        # self.subscribe([CHAIN_SUBSCRIPTION])
+        if not discovery:
+            await self._connect_to_peer(ip, port)
+        else:
+            await asyncio.wait_for(self._connect_to_peer(ip, port), timeout=5)
+            for _ in [
+                sub for sub in self.subscriptions if not self.paired_event[sub].is_set()
+            ]:
+                await asyncio.sleep(discovery_timeout)
+                await self.discovery(on_pair='disconnect', timeout=discovery_timeout)
 
     # ----------------------------------------------------------------------
     async def discovery(
@@ -980,20 +997,13 @@ class ChaskiNode:
             logger_main.warning(f"{self.name}: No connection to perform discovery.")
             return
 
-        # Check if the node is not provided and there are no edges
-        if (node is None) and (len(self.edges) == 0):
-            logger_main.warning(
-                f"{self.name}: Unable to discover new nodes no 'Node' or 'Edge' available."
-            )
-            return
-
         # Iterate over edges to identify unpaired subscriptions and check pairing status.
-        for edge in self.edges:
+        for edge in copy(self.edges):
             unpaired_subscription = []
             for subscription in self.subscriptions:
                 if subscription in edge.subscriptions:
                     logger_main.warning(
-                        f"{self.name}: The node is already paired for suscription {subscription}."
+                        f"{self.name}: The node is already paired for subscription {subscription}."
                     )
                     edge.paired = True
                     self.paired_event[subscription].set()
@@ -1006,7 +1016,6 @@ class ChaskiNode:
 
         # Iterate over the unpaired subscriptions to perform discovery
         for subscription in unpaired_subscription:
-
             data = {
                 "origin_ip": self.ip,
                 "origin_port": self.port,
@@ -1027,17 +1036,20 @@ class ChaskiNode:
                 edge=node,
             )
 
-            # Start a timer for the discovery process
-            t0 = time.time()
-            while time.time() < t0 + timeout:
-                await asyncio.sleep(0.1)
-                if self.paired_event[subscription].is_set():
-                    break
-            if time.time() > t0 + timeout:
+            try:
+                t0 = time.time()
+                await asyncio.wait_for(
+                    self.paired_event[subscription].wait(), timeout=timeout
+                )
+            except asyncio.TimeoutError:
                 logger_main.debug(
                     f"{self.name}: Timeout reached during discovery process for subscription {subscription}, node is considered paired."
                 )
-            self.paired_event[subscription].set()
+                self.paired_event[subscription].set()
+            finally:
+                logger_main.debug(
+                    f"Elapsed time: {time.time() - t0:.2f}s for subscription {subscription}"
+                )
 
     # ----------------------------------------------------------------------
     async def close_connection(self, edge: Edge, port: Optional[int] = None) -> None:
@@ -1681,7 +1693,8 @@ class ChaskiNode:
         self,
         server_edge: Edge,
         delay: float = 0,
-        back_delay=0,
+        # back_delay=0,
+        # add_suscriptions=[],
         response: bool = False,
     ):
         """
@@ -1710,7 +1723,8 @@ class ChaskiNode:
             data={
                 "handshake_id": id_,
                 'response': response,
-                'back_delay': back_delay,
+                #'add_suscriptions': add_suscriptions,
+                #'back_delay': back_delay,
             },
             edge=server_edge,
         )
@@ -1744,7 +1758,11 @@ class ChaskiNode:
 
         # Check if a handshake response is expected.
         if message.data["response"]:
-            await self.handshake(edge, delay=message.data["back_delay"])
+            await self.handshake(
+                edge,
+                # add_suscriptions=[CHAIN_SUBSCRIPTION],
+                # delay=message.data["back_delay"],
+            )
 
         # Respond with handshake acknowledgement
         await self._write(command="handshake_back", data=data, edge=edge)
@@ -1807,40 +1825,48 @@ class ChaskiNode:
         """
         subscription = message.data["origin_subscription"]
 
-        # Check if all subscriptions are paired
-        if not self.paired:
-            return
+        ## Check if all subscriptions are paired
+        # if not self.paired_for(subscription):
+        # return
 
-        # Check the status of the origin node
-        status = await self._request_status(
-            message.data["origin_ip"],
-            message.data["origin_port"],
-        )
+        if self.paired_for(subscription):
 
-        # Check if the original node is already paired
-        if status.data["paired"][subscription]:
-            logger_main.debug(
-                f"{self.name}: Node is already paired with another branch."
-            )
-            return
-
-        # Check if TTL (Time-to-Live) has reached zero
-        if message.data["ttl"] == 0:
-            logger_main.debug(f"{self.name}: Discovery time-to-live (TTL) reached 0.")
-            return
-
-        # Check if the node can accommodate more edges and the subscription matches
-        if (len(self.edges) < self.max_connections) and (
-            subscription in self.subscriptions
-        ):
-
-            # Attempt connection to peer node with the given subscription
-            await self._connect_to_peer(
+            # Check the status of the origin node
+            status = await self._request_status(
                 message.data["origin_ip"],
                 message.data["origin_port"],
-                paired=subscription,
-                data=message.data,
             )
+
+            # Check if the original node is already paired
+            if status.data["paired"][subscription]:
+                logger_main.debug(
+                    f"{self.name}: Node is already paired with another branch."
+                )
+                return
+
+            # Check if TTL (Time-to-Live) has reached zero
+            if message.data["ttl"] == 0:
+                logger_main.debug(
+                    f"{self.name}: Discovery time-to-live (TTL) reached 0."
+                )
+                return
+
+            connections = 0
+            for edge in self.edges:
+                if subscription in edge.subscriptions:
+                    connections += 1
+
+            if (connections < self.max_connections) and (
+                subscription in self.subscriptions
+            ):
+                # Attempt connection to peer node with the given subscription
+                await self._connect_to_peer(
+                    message.data["origin_ip"],
+                    message.data["origin_port"],
+                    paired=subscription,
+                    data=message.data,
+                )
+
         else:
             new_data = message.data.copy()
             new_data["previous_node"] = self.name
@@ -1857,7 +1883,7 @@ class ChaskiNode:
             new_data["visited"].add(self.name)
 
             # Iterate through edges and forward the discovery message to peer nodes that have not been visited.
-            for server_edge in self.edges:
+            for server_edge in copy(self.edges):
                 if not server_edge.name in [
                     message.data["previous_node"],
                     message.data["origin_name"],
@@ -2324,6 +2350,17 @@ class ChaskiNode:
             `True` if the node is paired for all subscriptions, otherwise `False`.
         """
         return all([self.paired_event[sub].is_set() for sub in self.subscriptions])
+
+    # ----------------------------------------------------------------------
+    def paired_for(self, subscription) -> bool:
+        """"""
+        if self.root:
+            return False
+
+        if subscription in self.paired_event:
+            return self.paired_event[subscription].is_set()
+        else:
+            return False
 
     # ----------------------------------------------------------------------
     async def _generic_request_udp(

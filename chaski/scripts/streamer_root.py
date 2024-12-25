@@ -13,7 +13,6 @@ async def run(ip, port, name):
         port=port,
         name=name,
         root=True,
-        paired=True,
         run=False,
     )
     print(f"Root Address: {root.address}")
