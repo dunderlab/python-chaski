@@ -19,7 +19,7 @@ PORT = 65440
 # ----------------------------------------------------------------------
 async def create_nodes(
     subscriptions: Union[int, List[str]],
-    ip: str = '127.0.0.1',
+    ip: str = "127.0.0.1",
     port: int = PORT,
 ) -> List[ChaskiNode]:
     """
@@ -52,12 +52,13 @@ async def create_nodes(
         ChaskiNode(
             ip=ip,
             port=port + i,
-            name=f'Node{i}',
+            name=f"Node{i}",
             subscriptions=sub,
             run=True,
             ttl=15,
             paired=(i == 0),
             reconnections=None,
+            max_connections=10,
         )
         for i, sub in enumerate(subscriptions)
     ]
@@ -76,9 +77,9 @@ async def run_transmission(producer, consumer, parent=None):
 
     await asyncio.sleep(0.3)
     await producer.push(
-        'topic1',
+        "topic1",
         {
-            'data': 'test0',
+            "data": "test0",
         },
     )
 
@@ -87,19 +88,20 @@ async def run_transmission(producer, consumer, parent=None):
         async for incoming_message in message_queue:
 
             if parent:
-                parent.assertEqual(f'test{count}', incoming_message.data['data'])
+                parent.assertEqual(f"test{count}", incoming_message.data["data"])
 
             if count >= 5:
+                await consumer.stop()
+                await producer.stop()
                 return
 
             count += 1
             await producer.push(
-                'topic1',
+                "topic1",
                 {
-                    'data': f'test{count}',
+                    "data": f"test{count}",
                 },
             )
 
-    await asyncio.sleep(1)
     await consumer.stop()
     await producer.stop()

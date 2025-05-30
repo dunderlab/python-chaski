@@ -128,7 +128,7 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
         AssertionError
             Raised if the nodes do not pair correctly according to their subscription topics.
         """
-        nodes = await create_nodes(['A', 'B', 'C', 'A', 'B', 'C'])
+        nodes = await create_nodes(['A', 'B', 'C', 'A', 'B', 'C'], port=65440)
         for node in nodes[1:]:
             await node._connect_to_peer(nodes[0])
 
@@ -158,7 +158,7 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
     # ----------------------------------------------------------------------
     async def test_single_subscription_with_disconnect(self):
         """"""
-        nodes = await create_nodes(['A', 'B', 'C', ['A', 'C'], ['B', 'A'], 'C'])
+        nodes = await create_nodes(['A', 'B', 'C', ['A', 'C'], ['B', 'A'], 'C'], port=65450)
         for node in nodes[1:]:
             await node._connect_to_peer(nodes[0])
 

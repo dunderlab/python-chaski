@@ -35,7 +35,7 @@ class CertificateAuthority:
         self.id = id
         if ssl_certificates_location is None:
             self.ssl_certificates_location = os.path.join(
-                user_data_dir("chaski-confluent"), 'certs'
+                user_data_dir("chaski-confluent"), "certs"
             )
         else:
             self.ssl_certificates_location = ssl_certificates_location
@@ -84,23 +84,23 @@ class CertificateAuthority:
             [
                 x509.NameAttribute(
                     NameOID.COUNTRY_NAME,
-                    self.ssl_certificate_attributes['Country Name'],
+                    self.ssl_certificate_attributes["Country Name"],
                 ),
                 x509.NameAttribute(
                     NameOID.STATE_OR_PROVINCE_NAME,
-                    self.ssl_certificate_attributes['State or Province Name'],
+                    self.ssl_certificate_attributes["State or Province Name"],
                 ),
                 x509.NameAttribute(
                     NameOID.LOCALITY_NAME,
-                    self.ssl_certificate_attributes['Locality Name'],
+                    self.ssl_certificate_attributes["Locality Name"],
                 ),
                 x509.NameAttribute(
                     NameOID.ORGANIZATION_NAME,
-                    self.ssl_certificate_attributes['Organization Name'],
+                    self.ssl_certificate_attributes["Organization Name"],
                 ),
                 x509.NameAttribute(
                     NameOID.COMMON_NAME,
-                    self.ssl_certificate_attributes['Common Name'] + 'CA',
+                    self.ssl_certificate_attributes["Common Name"] + "CA",
                 ),
             ]
         )
@@ -121,6 +121,28 @@ class CertificateAuthority:
             .add_extension(
                 x509.BasicConstraints(ca=True, path_length=None),
                 critical=True,
+            )
+            .add_extension(
+                x509.KeyUsage(
+                    digital_signature=False,
+                    content_commitment=False,
+                    key_encipherment=False,
+                    data_encipherment=False,
+                    key_agreement=False,
+                    key_cert_sign=True,
+                    crl_sign=True,
+                    encipher_only=False,
+                    decipher_only=False,
+                ),
+                critical=True,
+            )
+            .add_extension(
+                x509.SubjectKeyIdentifier.from_public_key(ca_key.public_key()),
+                critical=False,
+            )
+            .add_extension(
+                x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()),
+                critical=False,
             )
             .sign(ca_key, hashes.SHA256())
         )
@@ -150,7 +172,7 @@ class CertificateAuthority:
         Exception
             If the CA key path is not set.
         """
-        if hasattr(self, 'ca_key_path_'):
+        if hasattr(self, "ca_key_path_"):
             return self.ca_key_path_
         else:
             raise Exception("CA key path not set")
@@ -186,7 +208,7 @@ class CertificateAuthority:
         Exception
             If the CA certificate path is not set.
         """
-        if hasattr(self, 'ca_cert_path_'):
+        if hasattr(self, "ca_cert_path_"):
             return self.ca_cert_path_
         else:
             raise Exception("CA certificate path not set")
@@ -276,6 +298,14 @@ class CertificateAuthority:
                 x509.SubjectAlternativeName([x509.IPAddress(self.ip_address)]),
                 critical=False,
             )
+            .add_extension(
+                x509.SubjectKeyIdentifier.from_public_key(csr.public_key()),
+                critical=False,
+            )
+            .add_extension(
+                x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()),
+                critical=False,
+            )
             # Sign the certificate using the CA's private key with SHA256 as the hashing algorithm
             .sign(ca_key, hashes.SHA256())
         )
@@ -283,7 +313,7 @@ class CertificateAuthority:
         return certificate.public_bytes(serialization.Encoding.PEM)
 
     # ----------------------------------------------------------------------
-    def _key_and_csr(self, name='client') -> tuple:
+    def _key_and_csr(self, name="client") -> tuple:
         """
         Generate a private key and Certificate Signing Request (CSR).
 
@@ -308,11 +338,11 @@ class CertificateAuthority:
             If there is an error writing the private key or CSR files to the filesystem.
         """
         private_key_path_ = os.path.join(
-            self.ssl_certificates_location, f'{name}_{self.id}.key'
+            self.ssl_certificates_location, f"{name}_{self.id}.key"
         )
 
         certificate_path_ = os.path.join(
-            self.ssl_certificates_location, f'{name}_{self.id}.csr'
+            self.ssl_certificates_location, f"{name}_{self.id}.csr"
         )
 
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
@@ -335,23 +365,23 @@ class CertificateAuthority:
                     [
                         x509.NameAttribute(
                             NameOID.COUNTRY_NAME,
-                            self.ssl_certificate_attributes['Country Name'],
+                            self.ssl_certificate_attributes["Country Name"],
                         ),
                         x509.NameAttribute(
                             NameOID.STATE_OR_PROVINCE_NAME,
-                            self.ssl_certificate_attributes['State or Province Name'],
+                            self.ssl_certificate_attributes["State or Province Name"],
                         ),
                         x509.NameAttribute(
                             NameOID.LOCALITY_NAME,
-                            self.ssl_certificate_attributes['Locality Name'],
+                            self.ssl_certificate_attributes["Locality Name"],
                         ),
                         x509.NameAttribute(
                             NameOID.ORGANIZATION_NAME,
-                            self.ssl_certificate_attributes['Organization Name'],
+                            self.ssl_certificate_attributes["Organization Name"],
                         ),
                         x509.NameAttribute(
                             NameOID.COMMON_NAME,
-                            self.ssl_certificate_attributes['Common Name'],
+                            self.ssl_certificate_attributes["Common Name"],
                         ),
                     ]
                 )
@@ -381,10 +411,10 @@ class CertificateAuthority:
             If there is an error writing the private key or CSR files to the filesystem.
         """
         self.private_key_client_path_, self.certificate_client_path_ = (
-            self._key_and_csr(name='client')
+            self._key_and_csr(name="client")
         )
         self.private_key_server_path_, self.certificate_server_path_ = (
-            self._key_and_csr(name='server')
+            self._key_and_csr(name="server")
         )
 
     # ----------------------------------------------------------------------
@@ -446,10 +476,10 @@ class CertificateAuthority:
         Exception
             If the private key path is not set.
         """
-        if hasattr(self, 'private_key_client_path_'):
+        if hasattr(self, "private_key_client_path_"):
             return {
-                'client': self.private_key_client_path_,
-                'server': self.private_key_server_path_,
+                "client": self.private_key_client_path_,
+                "server": self.private_key_server_path_,
             }
         else:
             raise Exception("Private key path not set")
@@ -474,10 +504,10 @@ class CertificateAuthority:
         Exception
             If the CSR path is not set.
         """
-        if hasattr(self, 'certificate_client_path_'):
+        if hasattr(self, "certificate_client_path_"):
             return {
-                'client': self.certificate_client_path_,
-                'server': self.certificate_server_path_,
+                "client": self.certificate_client_path_,
+                "server": self.certificate_server_path_,
             }
         else:
             raise Exception("CA certificate path not set")
@@ -503,8 +533,8 @@ class CertificateAuthority:
             If the CSR path is not set.
         """
         return {
-            'client': self.certificate_paths['client'].replace('.csr', '.cert'),
-            'server': self.certificate_paths['server'].replace('.csr', '.cert'),
+            "client": self.certificate_paths["client"].replace(".csr", ".cert"),
+            "server": self.certificate_paths["server"].replace(".csr", ".cert"),
         }
 
     # ----------------------------------------------------------------------
@@ -533,7 +563,7 @@ class CertificateAuthority:
         IOError
             If there is an error reading the certificate file.
         """
-        with open(path, 'rb') as file:
+        with open(path, "rb") as file:
             return file.read()
 
     # ----------------------------------------------------------------------
@@ -557,7 +587,7 @@ class CertificateAuthority:
         IOError
             If there is an error writing the certificate file to the specified path.
         """
-        with open(path, 'wb') as cert_file:
+        with open(path, "wb") as cert_file:
             cert_file.write(certificate)
 
     # ----------------------------------------------------------------------
@@ -585,8 +615,8 @@ class CertificateAuthority:
         ssl_context_client = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         # Load and set the client's certificate and private key for the SSL context
         ssl_context_client.load_cert_chain(
-            certfile=self.certificate_signed_paths['client'],
-            keyfile=self.private_key_paths['client'],
+            certfile=self.certificate_signed_paths["client"],
+            keyfile=self.private_key_paths["client"],
         )
         # Load and set the Certificate Authority (CA) certificate to verify the client's server certificate
         ssl_context_client.load_verify_locations(cafile=self.ca_certificate_path)
@@ -597,8 +627,8 @@ class CertificateAuthority:
         ssl_context_server = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         # Load and set the server's certificate and private key for the SSL context
         ssl_context_server.load_cert_chain(
-            certfile=self.certificate_signed_paths['server'],
-            keyfile=self.private_key_paths['server'],
+            certfile=self.certificate_signed_paths["server"],
+            keyfile=self.private_key_paths["server"],
         )
         # Load and set the Certificate Authority (CA) certificate to verify the server's client certificate
         ssl_context_server.load_verify_locations(cafile=self.ca_certificate_path)

@@ -30,7 +30,7 @@ from typing import Optional
 
 
 ########################################################################
-class TestConnections:
+class _TestConnections:
     """
     Base class for testing connection-related functionality between ChaskiNode instances.
 
@@ -365,7 +365,7 @@ class TestConnections:
 
 
 ########################################################################
-class Test_Connections_for_IPv4(TestConnections, unittest.IsolatedAsyncioTestCase):
+class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCase):
     """
     Unit tests for testing connections between ChaskiNode instances using IPv4.
 
@@ -440,7 +440,7 @@ class Test_Connections_for_IPv4(TestConnections, unittest.IsolatedAsyncioTestCas
 
 
 ########################################################################
-class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, TestConnections):
+class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnections):
     """
     Unit tests for testing connections between ChaskiNode instances using IPv6.
 

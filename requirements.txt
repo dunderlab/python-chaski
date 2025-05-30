@@ -1,0 +1,5 @@
+platformdirs
+cryptography
+colorama
+networkx
+matplotlib

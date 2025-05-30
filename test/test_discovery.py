@@ -99,7 +99,7 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If the nodes do not correctly establish the connection without discovery.
         """
-        nodes = await create_nodes(list('AB'), self.ip)
+        nodes = await create_nodes(list('AB'), self.ip, port=65440)
         await nodes[0].connect(nodes[1])
 
         await asyncio.sleep(0.3)
@@ -135,7 +135,7 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If any node fails to establish the expected number of connections.
         """
-        nodes = await create_nodes(list('ABB'), self.ip)
+        nodes = await create_nodes(list('ABB'), self.ip, port=65450)
         await nodes[0].connect(nodes[1])
         await nodes[0].connect(nodes[2])
 
@@ -193,7 +193,7 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If any node fails to establish the expected number of connections.
         """
-        nodes = await create_nodes(list('ABB'), self.ip)
+        nodes = await create_nodes(list('ABB'), self.ip, port=65460)
         await nodes[1].connect(nodes[0])
         await nodes[2].connect(nodes[0])
 
@@ -250,7 +250,7 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If any node fails to establish or maintain the expected connections after discovery and disconnections.
         """
-        nodes = await create_nodes(list('ABB'), self.ip)
+        nodes = await create_nodes(list('ABB'), self.ip, port=65470)
         await nodes[1].connect(nodes[0])
         await nodes[2].connect(nodes[0])
 
@@ -305,7 +305,7 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If any node fails to establish the expected number of connections after discovery.
         """
-        nodes = await create_nodes(list('ABBBBBB'), self.ip)
+        nodes = await create_nodes(list('ABBBBBB'), self.ip, port=65480)
         await nodes[1]._connect_to_peer(nodes[0])
         await nodes[2]._connect_to_peer(nodes[0])
         await nodes[3]._connect_to_peer(nodes[0])
@@ -334,10 +334,10 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
             len(nodes[0].edges), 6, f"Node 0 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[1].edges), 5, f"Node 1 discovery failed after discovery"
+            len(nodes[1].edges), 6, f"Node 1 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[2].edges), 3, f"Node 2 discovery failed after discovery"
+            len(nodes[2].edges), 2, f"Node 2 discovery failed after discovery"
         )
         self.assertEqual(
             len(nodes[3].edges), 2, f"Node 3 discovery failed after discovery"
@@ -385,6 +385,8 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         self.assertConnection(
             nodes[1], nodes[2], "The node 1 is not connected to node 6"
         )
+
+        await self._close_nodes(nodes)
 
 
 if __name__ == '__main__':

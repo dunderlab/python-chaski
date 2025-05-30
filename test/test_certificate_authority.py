@@ -42,7 +42,10 @@ from chaski.utils.certificate_authority import CertificateAuthority
 class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
     """"""
 
-    ssl_certificates_location = 'ssl_certificates_location'
+    ssl_certificates_location = "ssl_certificates_location"
+    name = "Test-ID"
+    # name = "3ea4e610-f276-4715-aa52-88d1cf14a295"
+    # name = "4c535672-949e-480f-9df4-9548a4cc2c1f"
 
     @classmethod
     # ----------------------------------------------------------------------
@@ -59,7 +62,7 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         cls.ssl_certificates_location : str
             The location where SSL certificates are stored.
         """
-        cls.ssl_certificates_location = 'ssl_certificates_location'
+        cls.ssl_certificates_location = "ssl_certificates_location"
         if not os.path.exists(cls.ssl_certificates_location):
             os.mkdir(cls.ssl_certificates_location)
 
@@ -79,15 +82,15 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
             An instance of CertificateAuthority configured for testing.
         """
         ca = CertificateAuthority(
-            'Test-ID',
-            ipaddress.IPv4Address('192.168.0.1'),
+            self.name,
+            ipaddress.IPv4Address("127.0.0.1"),
             ssl_certificates_location=self.ssl_certificates_location,
             ssl_certificate_attributes={
-                'Country Name': "CO",
-                'Locality Name': "Manizales",
-                'Organization Name': "DunderLab",
-                'State or Province Name': "Caldas",
-                'Common Name': "Chaski-Confluent",
+                "Country Name": "CO",
+                "Locality Name": "Manizales",
+                "Organization Name": "DunderLab",
+                "State or Province Name": "Caldas",
+                "Common Name": "Chaski-Confluent",
             },
         )
         return ca
@@ -112,11 +115,11 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(
             os.path.exists(ca.ca_certificate_path),
-            'ca_certificate_path does not exist',
+            "ca_certificate_path does not exist",
         )
         self.assertTrue(
             os.path.exists(ca.ca_private_key_path),
-            'ca_private_key_path does not exist',
+            "ca_private_key_path does not exist",
         )
 
         certificate = x509.load_pem_x509_certificate(
@@ -134,16 +137,10 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         try:
             message = b"Test message"
 
-            signature = private_key.sign(
-                message, padding.PKCS1v15(), hashes.SHA256()
-            )
+            signature = private_key.sign(message, padding.PKCS1v15(), hashes.SHA256())
 
-            public_key.verify(
-                signature, message, padding.PKCS1v15(), hashes.SHA256()
-            )
-            self.assertTrue(
-                True, "The private key corresponds to the certificate."
-            )
+            public_key.verify(signature, message, padding.PKCS1v15(), hashes.SHA256())
+            self.assertTrue(True, "The private key corresponds to the certificate.")
         except Exception as e:
             self.assertTrue(
                 False,
@@ -170,20 +167,20 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         ca.generate_key_and_csr()
 
         self.assertTrue(
-            os.path.exists(ca.private_key_paths['client']),
-            '',
+            os.path.exists(ca.private_key_paths["client"]),
+            "",
         )
         self.assertTrue(
-            os.path.exists(ca.private_key_paths['server']),
-            '',
+            os.path.exists(ca.private_key_paths["server"]),
+            "",
         )
         self.assertTrue(
-            os.path.exists(ca.certificate_paths['client']),
-            '',
+            os.path.exists(ca.certificate_paths["client"]),
+            "",
         )
         self.assertTrue(
-            os.path.exists(ca.certificate_paths['server']),
-            '',
+            os.path.exists(ca.certificate_paths["server"]),
+            "",
         )
 
         def key_modulus(key: bytes) -> int:
@@ -200,10 +197,10 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
             return modulus.n
 
         client_key_modulus = key_modulus(
-            ca.load_certificate(ca.private_key_paths['client'])
+            ca.load_certificate(ca.private_key_paths["client"])
         )
         client_csr_modulus = csr_modulus(
-            ca.load_certificate(ca.certificate_paths['client'])
+            ca.load_certificate(ca.certificate_paths["client"])
         )
         self.assertEqual(
             client_key_modulus,
@@ -212,10 +209,10 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         )
 
         server_key_modulus = key_modulus(
-            ca.load_certificate(ca.private_key_paths['server'])
+            ca.load_certificate(ca.private_key_paths["server"])
         )
         server_csr_modulus = csr_modulus(
-            ca.load_certificate(ca.certificate_paths['server'])
+            ca.load_certificate(ca.certificate_paths["server"])
         )
         self.assertEqual(
             server_key_modulus,
@@ -242,42 +239,30 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         ca = self.ca
 
         ca.load_ca(
-            ca_key_path=os.path.join(
-                self.ssl_certificates_location, 'ca.key'
-            ),
-            ca_cert_path=os.path.join(
-                self.ssl_certificates_location, 'ca.cert'
-            ),
+            ca_key_path=os.path.join(self.ssl_certificates_location, "ca.key"),
+            ca_cert_path=os.path.join(self.ssl_certificates_location, "ca.cert"),
         )
 
         ca.load_key_and_csr(
             private_key_client_path=os.path.join(
-                self.ssl_certificates_location, 'client_Test-ID.key'
+                self.ssl_certificates_location, f"client_{self.name}.key"
             ),
             certificate_client_path=os.path.join(
-                self.ssl_certificates_location, 'client_Test-ID.csr'
+                self.ssl_certificates_location, f"client_{self.name}.csr"
             ),
             private_key_server_path=os.path.join(
-                self.ssl_certificates_location, 'server_Test-ID.key'
+                self.ssl_certificates_location, f"server_{self.name}.key"
             ),
             certificate_server_path=os.path.join(
-                self.ssl_certificates_location, 'server_Test-ID.csr'
+                self.ssl_certificates_location, f"server_{self.name}.csr"
             ),
         )
 
-        with open(ca.certificate_signed_paths['client'], 'wb') as file:
-            file.write(
-                ca.sign_csr(
-                    ca.load_certificate(ca.certificate_paths['client'])
-                )
-            )
+        with open(ca.certificate_signed_paths["client"], "wb") as file:
+            file.write(ca.sign_csr(ca.load_certificate(ca.certificate_paths["client"])))
 
-        with open(ca.certificate_signed_paths['server'], 'wb') as file:
-            file.write(
-                ca.sign_csr(
-                    ca.load_certificate(ca.certificate_paths['server'])
-                )
-            )
+        with open(ca.certificate_signed_paths["server"], "wb") as file:
+            file.write(ca.sign_csr(ca.load_certificate(ca.certificate_paths["server"])))
 
         ca_cert = x509.load_pem_x509_certificate(
             ca.load_certificate(ca.ca_certificate_path), default_backend()
@@ -285,11 +270,11 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         ca_public_key = ca_cert.public_key()
 
         client_cert = x509.load_pem_x509_certificate(
-            ca.load_certificate(ca.certificate_signed_paths['client']),
+            ca.load_certificate(ca.certificate_signed_paths["client"]),
             default_backend(),
         )
         server_cert = x509.load_pem_x509_certificate(
-            ca.load_certificate(ca.certificate_signed_paths['server']),
+            ca.load_certificate(ca.certificate_signed_paths["server"]),
             default_backend(),
         )
 
@@ -300,9 +285,7 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
                 padding.PKCS1v15(),
                 client_cert.signature_hash_algorithm,
             )
-            self.assertTrue(
-                True, "The client certificate was signed by the CA."
-            )
+            self.assertTrue(True, "The client certificate was signed by the CA.")
         except Exception as e:
             self.assertTrue(
                 False,
@@ -316,9 +299,7 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
                 padding.PKCS1v15(),
                 server_cert.signature_hash_algorithm,
             )
-            self.assertTrue(
-                True, "The server certificate was signed by the CA."
-            )
+            self.assertTrue(True, "The server certificate was signed by the CA.")
         except Exception as e:
             self.assertTrue(
                 False,

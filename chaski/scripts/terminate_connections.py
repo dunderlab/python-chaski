@@ -49,3 +49,6 @@ def main():
     # Iterate over the range of ports and close active connections
     for port in range(START_PORT, END_PORT + 1):
         close_connections(port)
+
+if __name__ == "__main__":
+    main()
