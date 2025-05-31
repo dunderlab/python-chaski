@@ -18,8 +18,7 @@ Key Functionalities
 import asyncio
 import threading
 import inspect
-import typing
-import logging
+from typing import Generator, Any
 
 from chaski.streamer import ChaskiStreamer
 
@@ -75,7 +74,7 @@ class ChaskiStreamerSync:
         # This function sets the given event loop as the current event loop and starts it to run indefinitely, enabling asynchronous tasks.
         asyncio.set_event_loop(self.loop)
 
-        self.streamer = ChaskiStreamer(*args, **kwargs, run=False, sync=True)
+        self.streamer = ChaskiStreamer(*args, **kwargs, sync=True, run=False)
 
         # Start a new thread that runs the event loop, allowing for asynchronous operations to occur in parallel.
         self.thread = threading.Thread(target=self._start_loop, args=(self.loop,))
@@ -94,8 +93,8 @@ class ChaskiStreamerSync:
         such as the IP address and port. If the instance is a root node, it prepends an
         asterisk (*) to the string.
         """
-        h = '*' if self.paired else ''
-        return h + self.address.replace('ChaskiStreamer', 'ChaskiStreamerSync')
+        h = "*" if self.paired else ""
+        return h + self.address.replace("ChaskiStreamer", "ChaskiStreamerSync")
 
     # ----------------------------------------------------------------------
     def _start_loop(self, loop: asyncio.AbstractEventLoop) -> None:
@@ -148,7 +147,7 @@ class ChaskiStreamerSync:
         self.thread.join()
 
     # ----------------------------------------------------------------------
-    def __getattr__(self, attr: str) -> typing.Any:
+    def __getattr__(self, attr: str) -> Any:
         """Retrieve an attribute from the ChaskiStreamer instance.
 
         This method overrides the default behavior of attribute access,
@@ -190,7 +189,7 @@ class ChaskiStreamerSync:
             return object_
 
     # ----------------------------------------------------------------------
-    def message_stream(self, timeout=None) -> typing.Generator['Message', None, None]:
+    def message_stream(self, timeout=None) -> Generator:
         """
         Generator to yield messages from the streamer's message queue.
 
@@ -206,7 +205,7 @@ class ChaskiStreamerSync:
 
         Returns
         -------
-        None
+        Generator
             If the queue times out or an exception occurs.
         """
         while True:
