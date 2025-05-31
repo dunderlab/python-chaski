@@ -28,6 +28,7 @@ import asyncio
 from chaski.utils.auto import create_nodes
 from typing import Optional
 from chaski.scripts import terminate_connections
+from chaski.node import ChaskiNode
 
 
 ########################################################################
@@ -45,7 +46,7 @@ class _TestConnections:
         terminate_connections.main()
 
     # ----------------------------------------------------------------------
-    async def _close_nodes(self, nodes: list["ChaskiNode"]):
+    async def _close_nodes(self, nodes: list[ChaskiNode]):
         """
         Close all ChaskiNode instances in the provided list.
 
@@ -63,7 +64,7 @@ class _TestConnections:
 
     # ----------------------------------------------------------------------
     def assertConnection(
-        self, node1: "ChaskiNode", node2: "ChaskiNode", msg: Optional[str] = None
+        self, node1: "ChaskiNode", node2: ChaskiNode, msg: Optional[str] = None
     ):
         """
         Assert that two ChaskiNodes are connected to each other.
