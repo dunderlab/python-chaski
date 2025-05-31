@@ -59,7 +59,7 @@ security = [
 
 testing = [
     "pytest",
-    "nest_asyncio",
+    "nest-asyncio",
 ]
 
 
