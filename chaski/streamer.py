@@ -19,8 +19,10 @@ import asyncio
 import hashlib
 from queue import Queue as SyncQueue
 from asyncio import Queue
-from typing import Generator
-from chaski.node import ChaskiNode
+from typing import AsyncGenerator
+from types import TracebackType
+from io import BytesIO
+from chaski.node import ChaskiNode, Message, Edge
 from chaski.utils.persistent_storage import PersistentStorage
 from typing import Any
 
@@ -190,7 +192,7 @@ class ChaskiStreamer(ChaskiNode):
         }
 
     # ----------------------------------------------------------------------
-    async def __aenter__(self) -> Generator["Message", None, None]:
+    async def __aenter__(self) -> AsyncGenerator:
         """
         Enter the asynchronous context for streaming messages.
 
@@ -200,7 +202,7 @@ class ChaskiStreamer(ChaskiNode):
 
         Returns
         -------
-        Generator[Message, None, None]
+        AsyncGenerator[Message, None, None]
             A generator that yields `Message` objects as they arrive in the message queue.
         """
         return self.message_stream()
@@ -210,7 +212,7 @@ class ChaskiStreamer(ChaskiNode):
         self,
         exception_type: type,
         exception_value: BaseException,
-        exception_traceback: "TracebackType",
+        exception_traceback: TracebackType,
     ) -> None:
         """
         Exit the runtime context related to this object and stop the streamer.
@@ -255,7 +257,7 @@ class ChaskiStreamer(ChaskiNode):
         await self._write("ChaskiMessage", data=data, topic=topic)
 
     # ----------------------------------------------------------------------
-    async def _process_ChaskiMessage(self, message: "Message", edge: "Edge") -> None:
+    async def _process_ChaskiMessage(self, message: Message, edge: Edge) -> None:
         """
         Process an incoming Chaski message and place it onto the message queue.
 
@@ -281,7 +283,7 @@ class ChaskiStreamer(ChaskiNode):
         if not self.terminate_stream_flag:
 
             if self.sync:
-                self.message_queue.put(message)
+                await self.message_queue.put(message)
                 await asyncio.sleep(0)
             else:
                 await self.message_queue.put(message)
@@ -309,7 +311,7 @@ class ChaskiStreamer(ChaskiNode):
         self.allow_incoming_files = False
 
     # ----------------------------------------------------------------------
-    async def message_stream(self) -> Generator["Message", None, None]:
+    async def message_stream(self) -> AsyncGenerator:
         """
         Asynchronously generate messages from the message queue.
 
@@ -320,7 +322,7 @@ class ChaskiStreamer(ChaskiNode):
 
         Yields
         ------
-        Message
+        AsyncGenerator
             A `Message` object retrieved from the message queue.
 
         Notes
@@ -332,9 +334,8 @@ class ChaskiStreamer(ChaskiNode):
         while True:
             try:
                 message = await self.message_queue.get()
-            except Exception as e:
+            except Exception:
                 await asyncio.sleep(0.1)
-                e
                 continue
             except asyncio.CancelledError:
                 return
@@ -360,9 +361,9 @@ class ChaskiStreamer(ChaskiNode):
     async def push_file(
         self,
         topic: str,
-        file: "IOBase",
+        file: BytesIO,
         filename: str = None,
-        data: dict = {},
+        data: dict = None,
     ):
         """
         Asynchronously sends a file chunk by chunk to the specified topic.
@@ -377,7 +378,7 @@ class ChaskiStreamer(ChaskiNode):
         topic : str
             The topic to which the file chunks are to be sent. Nodes subscribing to this
             topic will receive the file chunks.
-        file : IOBase
+        file : BytesIO
             A file-like object (must support `read` method). The file from which the data is read
             and sent in chunks.
         filename : str, optional
@@ -425,7 +426,7 @@ class ChaskiStreamer(ChaskiNode):
                 await asyncio.sleep(0)  # very important sleep
 
     # ----------------------------------------------------------------------
-    async def _process_ChaskiFile(self, message: "Message", edge: "Edge") -> None:
+    async def _process_ChaskiFile(self, message: Message, edge: Edge) -> None:
         """
         Process an incoming ChaskiFile message and append each chunk of data to the target file.
 
@@ -473,9 +474,7 @@ class ChaskiStreamer(ChaskiNode):
                 )
 
     # ----------------------------------------------------------------------
-    async def _process_ChaskiStorageRequest(
-        self, message: "Message", edge: "Edge"
-    ) -> None:
+    async def _process_ChaskiStorageRequest(self, message: Message, edge: Edge) -> None:
         """
         Process a storage request received via Chaski.
 
@@ -500,7 +499,7 @@ class ChaskiStreamer(ChaskiNode):
             await self._send_udp_message("storage", data, ip, port)
 
     # ----------------------------------------------------------------------
-    def _process_udp_storage(self, message: "Message") -> None:
+    def _process_udp_storage(self, message: Message) -> None:
         """
         Process a storage response received via UDP.
 
