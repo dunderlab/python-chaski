@@ -610,11 +610,13 @@ class ChaskiNode:
 
         # Request an SSL certificate for secure communication if specified
         if request_ssl_certificate:
-            asyncio.sleep(1)
-            asyncio.create_task(self.request_ssl_certificate(request_ssl_certificate))
-
-    #             if os.path.exists(self.ssl_context_client,
-    #                               self.ssl_context_server)
+            loop = asyncio.get_event_loop()
+            loop.call_later(
+                1,
+                lambda: asyncio.create_task(
+                    self.request_ssl_certificate(request_ssl_certificate)
+                ),
+            )
 
     # ----------------------------------------------------------------------
     def __repr__(self) -> str:

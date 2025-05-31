@@ -6,23 +6,30 @@ from chaski.remote import ChaskiRemote
 
 logging.basicConfig(level=logging.DEBUG)
 
-parser = argparse.ArgumentParser(description='Chaski Remote Server')
+parser = argparse.ArgumentParser(description="Chaski Remote Server")
 parser.add_argument(
-    '-p',
-    '--port',
+    "-i",
+    "--ip",
     type=str,
-    default='65434',
-    help='Port number to run the server on',
+    default="127.0.0.1",
+    help="IP address to run the server on",
 )
 parser.add_argument(
-    '-n',
-    '--name',
+    "-p",
+    "--port",
     type=str,
-    default='ChaskiRemote',
-    help='Name of the server',
+    default="65434",
+    help="Port number to run the server on",
 )
 parser.add_argument(
-    'modules', type=str, help='Comma-separated list of available modules'
+    "-n",
+    "--name",
+    type=str,
+    default="ChaskiRemote",
+    help="Name of the server",
+)
+parser.add_argument(
+    "modules", type=str, help="Comma-separated list of available modules"
 )
 
 args = parser.parse_args()
@@ -32,9 +39,10 @@ args = parser.parse_args()
 async def run():
     """"""
     server = ChaskiRemote(
+        ip=args.ip,
         port=args.port,
         name=args.name,
-        available=args.modules.split(','),
+        available=args.modules.split(","),
         run=False,
     )
 
@@ -48,5 +56,5 @@ def main():
     asyncio.run(run())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

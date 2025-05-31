@@ -27,6 +27,7 @@ import unittest
 import asyncio
 from chaski.utils.auto import create_nodes
 from typing import Optional
+from chaski.scripts import terminate_connections
 
 
 ########################################################################
@@ -40,8 +41,11 @@ class _TestConnections:
     communication protocols, such as IPv4 and IPv6.
     """
 
+    def tearDown(self):
+        terminate_connections.main()
+
     # ----------------------------------------------------------------------
-    async def _close_nodes(self, nodes: list['ChaskiNode']):
+    async def _close_nodes(self, nodes: list["ChaskiNode"]):
         """
         Close all ChaskiNode instances in the provided list.
 
@@ -54,11 +58,12 @@ class _TestConnections:
             A list containing instances of ChaskiNode that need to be stopped.
         """
         for node in nodes:
+            await asyncio.sleep(0.3)
             await node.stop()
 
     # ----------------------------------------------------------------------
     def assertConnection(
-        self, node1: 'ChaskiNode', node2: 'ChaskiNode', msg: Optional[str] = None
+        self, node1: "ChaskiNode", node2: "ChaskiNode", msg: Optional[str] = None
     ):
         """
         Assert that two ChaskiNodes are connected to each other.
@@ -358,7 +363,7 @@ class _TestConnections:
         }
         response_data = await nodes[0]._test_generic_request_udp(dummy_data)
         self.assertEqual(
-            dummy_data, response_data, 'Mismatch between sent and received data'
+            dummy_data, response_data, "Mismatch between sent and received data"
         )
 
         await self._close_nodes(nodes)
@@ -414,7 +419,7 @@ class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCa
         -----
         This method is automatically invoked by the testing framework and typically does not need to be called explicitly.
         """
-        self.ip = '127.0.0.1'
+        self.ip = "127.0.0.1"
         await asyncio.sleep(0)
 
     async def test_single_connections(self):
@@ -489,7 +494,7 @@ class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnectio
         -----
         This method is automatically invoked by the testing framework and typically does not need to be called explicitly.
         """
-        self.ip = '::1'
+        self.ip = "::1"
         await asyncio.sleep(0)
 
     async def test_single_connections(self):
@@ -514,5 +519,5 @@ class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnectio
         return await super().test_response_udp()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

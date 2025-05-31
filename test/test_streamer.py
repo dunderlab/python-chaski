@@ -14,6 +14,7 @@ import asyncio
 import os
 from chaski.streamer import ChaskiStreamer
 from chaski.utils.auto import run_transmission
+from chaski.scripts import terminate_connections
 
 
 ########################################################################
@@ -25,6 +26,10 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
     using asynchronous methods. The tests simulate the behavior of a producer and a consumer
     to ensure that messages are correctly streamed and received.
     """
+
+    #
+    def tearDown(self):
+        terminate_connections.main()
 
     # ----------------------------------------------------------------------
     async def test_stream(self) -> None:
@@ -44,16 +49,16 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data does not match the expected values.
         """
         producer = ChaskiStreamer(
-            port=8511,
-            name='Producer',
-            subscriptions=['topic1'],
+            port=65440,
+            name="Producer",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
         consumer = ChaskiStreamer(
-            port=8512,
-            name='Consumer',
-            subscriptions=['topic1'],
+            port=65441,
+            name="Consumer",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
@@ -78,72 +83,72 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         """
 
         def new_file_event(**kwargs):
-            size = kwargs['data']['size']
+            size = kwargs["data"]["size"]
             self.assertEqual(
                 size,
-                kwargs['size'],
+                kwargs["size"],
                 f"File {kwargs['filename']} no match size of {kwargs['filename'][6:-5]}",
             )
             hash = ChaskiStreamer.get_hash(
                 os.path.join(
-                    kwargs['destination_folder'],
-                    kwargs['filename'],
+                    kwargs["destination_folder"],
+                    kwargs["filename"],
                 )
             )
             self.assertEqual(
                 hash,
-                kwargs['hash'],
+                kwargs["hash"],
                 "The hash of the received file does not match the expected hash.",
             )
 
         producer = ChaskiStreamer(
-            port=8513,
-            name='Producer',
-            subscriptions=['topicF'],
+            port=65440,
+            name="Producer",
+            subscriptions=["topicF"],
             reconnections=None,
             #
             # File transfer
             allow_incoming_files=True,
             file_handling_callback=new_file_event,
-            destination_folder=os.path.join('testdir', 'output'),
+            destination_folder=os.path.join("file_transfer", "output"),
         )
 
         consumer = ChaskiStreamer(
-            port=8514,
-            name='Consumer',
-            subscriptions=['topicF'],
+            port=65441,
+            name="Consumer",
+            subscriptions=["topicF"],
             reconnections=None,
             #
             # File transfer
             allow_incoming_files=True,
             file_handling_callback=new_file_event,
-            destination_folder=os.path.join('testdir', 'output'),
+            destination_folder=os.path.join("file_transfer", "output"),
         )
 
         await asyncio.sleep(0.3)
-        await producer.connect(consumer.address)
+        await producer.connect(consumer)
         await asyncio.sleep(0.3)
 
         for filename, size in [
-            ('dummy_1KB.data', 1e3),
-            ('dummy_10KB.data', 10e3),
-            ('dummy_100KB.data', 100e3),
-            ('dummy_1MB.data', 1e6),
-            ('dummy_10MB.data', 10e6),
-            ('dummy_100MB.data', 100e6),
+            ("dummy_1KB.data", 1e3),
+            ("dummy_10KB.data", 10e3),
+            ("dummy_100KB.data", 100e3),
+            ("dummy_1MB.data", 1e6),
+            ("dummy_10MB.data", 10e6),
+            ("dummy_100MB.data", 100e6),
             # ('dummy_500MB.data', 500e6),
             # ('dummy_1000MB.data', 1000e6),
             # ('dummy_1500MB.data', 1500e6),
         ]:
-            if os.path.exists(os.path.join('testdir', 'output', filename)):
-                os.remove(os.path.join('testdir', 'output', filename))
+            if os.path.exists(os.path.join("file_transfer", "output", filename)):
+                os.remove(os.path.join("file_transfer", "output", filename))
 
-            with open(os.path.join('testdir', 'input', filename), 'rb') as file:
+            with open(os.path.join("file_transfer", "input", filename), "rb") as file:
                 await producer.push_file(
-                    'topicF',
+                    "topicF",
                     file,
                     data={
-                        'size': size,
+                        "size": size,
                     },
                 )
 
@@ -170,43 +175,43 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         """
 
         producer = ChaskiStreamer(
-            # port=8515,
-            name='Producer',
-            subscriptions=['topicF'],
+            port=65440,
+            name="Producer",
+            subscriptions=["topicF"],
             reconnections=None,
             #
             # File transfer
             allow_incoming_files=True,
-            destination_folder=os.path.join('testdir', 'output'),
+            destination_folder=os.path.join("file_transfer", "output"),
         )
 
         consumer = ChaskiStreamer(
-            # port=8516,
-            name='Consumer',
-            subscriptions=['topicF'],
+            port=65441,
+            name="Consumer",
+            subscriptions=["topicF"],
             reconnections=None,
             #
             # File transfer
             allow_incoming_files=False,
-            destination_folder=os.path.join('testdir', 'output'),
+            destination_folder=os.path.join("file_transfer", "output"),
         )
 
         await asyncio.sleep(0.3)
         await producer.connect(consumer.address)
         await asyncio.sleep(0.3)
 
-        filename = 'dummy_1KB.data'
+        filename = "dummy_1KB.data"
 
-        if os.path.exists(os.path.join('testdir', 'output', filename)):
-            os.remove(os.path.join('testdir', 'output', filename))
+        if os.path.exists(os.path.join("file_transfer", "output", filename)):
+            os.remove(os.path.join("file_transfer", "output", filename))
 
-        with open(os.path.join('testdir', 'input', filename), 'rb') as file:
-            await producer.push_file('topicF', file)
+        with open(os.path.join("file_transfer", "input", filename), "rb") as file:
+            await producer.push_file("topicF", file)
 
         await asyncio.sleep(0.5)
         self.assertFalse(
-            os.path.exists(os.path.join('testdir', 'output', filename)),
-            'File transfer should fail as consumer has file transfer disabled',
+            os.path.exists(os.path.join("file_transfer", "output", filename)),
+            "File transfer should fail as consumer has file transfer disabled",
         )
         await asyncio.sleep(1)
         await consumer.stop()
@@ -230,44 +235,44 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data at the final consumer does not match the expected values.
         """
         chain0 = ChaskiStreamer(
-            # port=65440,
-            name='Producer',
-            subscriptions=['topic1'],
+            port=65440,
+            name="Producer",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain1 = ChaskiStreamer(
-            # port=65441,
-            name='Producer',
-            subscriptions=['topic1'],
+            port=65441,
+            name="Producer",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain2 = ChaskiStreamer(
-            # port=65434,
-            name='Producer',
-            subscriptions=['topic1'],
+            port=65442,
+            name="Producer",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain3 = ChaskiStreamer(
-            # port=65435,
-            name='Producer',
-            subscriptions=['topic1'],
+            port=65443,
+            name="Producer",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain4 = ChaskiStreamer(
-            # port=65436,
-            name='Producer',
-            subscriptions=['topic1'],
+            port=65444,
+            name="Producer",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain5 = ChaskiStreamer(
-            # port=65437,
-            name='Producer',
-            subscriptions=['topic1'],
+            port=65445,
+            name="Producer",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
@@ -280,9 +285,9 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
         await asyncio.sleep(0.3)
         await chain0.push(
-            'topic1',
+            "topic1",
             {
-                'data': 'test0',
+                "data": "test0",
             },
         )
 
@@ -290,7 +295,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         async with chain5 as message_queue:
             async for incoming_message in message_queue:
 
-                self.assertEqual(f'test{count}', incoming_message.data['data'])
+                self.assertEqual(f"test{count}", incoming_message.data["data"])
 
                 if count >= 5:
                     chain5.terminate_stream()
@@ -298,9 +303,9 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
                 count += 1
                 await chain0.push(
-                    'topic1',
+                    "topic1",
                     {
-                        'data': f'test{count}',
+                        "data": f"test{count}",
                     },
                 )
 
@@ -330,24 +335,24 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data at the final consumer does not match the expected values.
         """
         chain0 = ChaskiStreamer(
-            # port=65440,
-            name='Producer 1',
+            port=65440,
+            name="Producer 1",
             root=True,
             paired=True,
             reconnections=None,
         )
 
         chain1 = ChaskiStreamer(
-            # port=65441,
-            name='Producer 2',
-            subscriptions=['topic1'],
+            port=65441,
+            name="Producer 2",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain2 = ChaskiStreamer(
-            # port=65442,
-            name='Producer 3',
-            subscriptions=['topic1'],
+            port=65442,
+            name="Producer 3",
+            subscriptions=["topic1"],
             reconnections=None,
         )
 
@@ -357,9 +362,9 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
         await asyncio.sleep(0.3)
         await chain1.push(
-            'topic1',
+            "topic1",
             {
-                'data': 'test0',
+                "data": "test0",
             },
         )
 
@@ -367,7 +372,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         async with chain2 as message_queue:
             async for incoming_message in message_queue:
 
-                self.assertEqual(f'test{count}', incoming_message.data['data'])
+                self.assertEqual(f"test{count}", incoming_message.data["data"])
 
                 if count >= 5:
                     chain2.terminate_stream()
@@ -375,9 +380,9 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
                 count += 1
                 await chain0.push(
-                    'topic1',
+                    "topic1",
                     {
-                        'data': f'test{count}',
+                        "data": f"test{count}",
                     },
                 )
 
@@ -387,5 +392,5 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         await chain0.stop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

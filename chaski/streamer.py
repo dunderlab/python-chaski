@@ -39,7 +39,7 @@ class ChaskiStreamer(ChaskiNode):
     # ----------------------------------------------------------------------
     def __init__(
         self,
-        destination_folder: str = '.',
+        destination_folder: str = ".",
         chunk_size: int = 8192,
         file_handling_callback: callable = None,
         allow_incoming_files: bool = False,
@@ -48,6 +48,8 @@ class ChaskiStreamer(ChaskiNode):
         *args: tuple,
         **kwargs: dict,
     ):
+        # Initialize lock for file transfer to prevent concurrent transfers
+        self._file_transfer_lock = asyncio.Lock()
         """
         Initialize a new instance of ChaskiStreamer.
 
@@ -86,8 +88,8 @@ class ChaskiStreamer(ChaskiNode):
         self.terminate_stream_flag = False
 
         self.enable_message_propagation()
-        self.add_propagation_command('ChaskiMessage')
-        self.add_propagation_command('ChaskiStorageRequest')
+        self.add_propagation_command("ChaskiMessage")
+        self.add_propagation_command("ChaskiStorageRequest")
 
         if persistent_storage:
             self.persistent_storage = PersistentStorage()
@@ -101,7 +103,7 @@ class ChaskiStreamer(ChaskiNode):
         such as the IP address and port. If the instance is a root node, it prepends an
         asterisk (*) to the string.
         """
-        h = '*' if self.paired else ''
+        h = "*" if self.paired else ""
         return h + self.address
 
     # ----------------------------------------------------------------------
@@ -122,7 +124,7 @@ class ChaskiStreamer(ChaskiNode):
 
     # ----------------------------------------------------------------------
     @classmethod
-    def get_hash(cls, file: str, algorithm: str = 'sha256') -> str:
+    def get_hash(cls, file: str, algorithm: str = "sha256") -> str:
         """
         Compute the hash of a file using the specified algorithm.
 
@@ -143,7 +145,7 @@ class ChaskiStreamer(ChaskiNode):
             The hexadecimal hash digest of the file.
         """
         hash_func = hashlib.new(algorithm)
-        with open(file, 'rb') as f:
+        with open(file, "rb") as f:
             while chunk := f.read(8192):  # Read the file in 8192 byte blocks
                 hash_func.update(chunk)
         return hash_func.hexdigest()
@@ -188,7 +190,7 @@ class ChaskiStreamer(ChaskiNode):
         }
 
     # ----------------------------------------------------------------------
-    async def __aenter__(self) -> Generator['Message', None, None]:
+    async def __aenter__(self) -> Generator["Message", None, None]:
         """
         Enter the asynchronous context for streaming messages.
 
@@ -208,7 +210,7 @@ class ChaskiStreamer(ChaskiNode):
         self,
         exception_type: type,
         exception_value: BaseException,
-        exception_traceback: 'TracebackType',
+        exception_traceback: "TracebackType",
     ) -> None:
         """
         Exit the runtime context related to this object and stop the streamer.
@@ -250,10 +252,10 @@ class ChaskiStreamer(ChaskiNode):
         data : bytes, optional
             The byte-encoded data to be sent with the message. This could be any binary payload that subscribers are expected to process.
         """
-        await self._write('ChaskiMessage', data=data, topic=topic)
+        await self._write("ChaskiMessage", data=data, topic=topic)
 
     # ----------------------------------------------------------------------
-    async def _process_ChaskiMessage(self, message: 'Message', edge: 'Edge') -> None:
+    async def _process_ChaskiMessage(self, message: "Message", edge: "Edge") -> None:
         """
         Process an incoming Chaski message and place it onto the message queue.
 
@@ -307,7 +309,7 @@ class ChaskiStreamer(ChaskiNode):
         self.allow_incoming_files = False
 
     # ----------------------------------------------------------------------
-    async def message_stream(self) -> Generator['Message', None, None]:
+    async def message_stream(self) -> Generator["Message", None, None]:
         """
         Asynchronously generate messages from the message queue.
 
@@ -358,7 +360,7 @@ class ChaskiStreamer(ChaskiNode):
     async def push_file(
         self,
         topic: str,
-        file: 'IOBase',
+        file: "IOBase",
         filename: str = None,
         data: dict = {},
     ):
@@ -386,37 +388,44 @@ class ChaskiStreamer(ChaskiNode):
         This method uses asynchronous I/O to read the file in chunks and send each chunk
         without blocking the event loop. It ensures that the entire file is processed and sent
         even if the process involves multiple chunks.
+
+        This method uses a lock to ensure only one file transfer happens at a time.
         """
-        size = 0
-        # Initialize a SHA-256 hash function for computing the hash digest of the file chunks
-        hash_func = hashlib.new('sha256')
-        while True:
-            # Read the next chunk of data from the file up to the specified chunk size
-            chunk = file.read(self.chunk_size)
-            # Increment the size by the length of the current chunk
-            size += len(chunk)
-            # Update the hash function with the current chunk of data.
-            hash_func.update(chunk)
-            # Package the chunked file data along with metadata such as filename, hash, and chunk size
-            package_data = {
-                'filename': (filename if filename else os.path.split(file.name)[-1]),
-                'chunk': chunk,
-                'hash': hash_func.hexdigest(),
-                'data': data,
-                'chunk_size': self.chunk_size,
-                'size': size,
-            }
 
-            # Send the chunked file data as a message to the specified topic and yield control to the event loop
-            await self._write('ChaskiFile', data=package_data, topic=topic)
-            await asyncio.sleep(0)  # very important sleep
+        # Acquire the lock to ensure only one file transfer at a time
+        async with self._file_transfer_lock:
+            size = 0
+            # Initialize a SHA-256 hash function for computing the hash digest of the file chunks
+            hash_func = hashlib.new("sha256")
 
-            # If no more chunks are available to read, the file transfer is complete
-            if not chunk:
-                break
+            while True:
+                # Read the next chunk of data from the file up to the specified chunk size
+                chunk = file.read(self.chunk_size)
+                # If no more chunks are available to read, the file transfer is complete
+                if not chunk:
+                    break
+                # Increment the size by the length of the current chunk
+                size += len(chunk)
+                # Update the hash function with the current chunk of data.
+                hash_func.update(chunk)
+                # Package the chunked file data along with metadata such as filename, hash, and chunk size
+                package_data = {
+                    "filename": (
+                        filename if filename else os.path.split(file.name)[-1]
+                    ),
+                    "chunk": chunk,
+                    "hash": hash_func.hexdigest(),
+                    "data": data,
+                    "chunk_size": self.chunk_size,
+                    "size": size,
+                }
+
+                # Send the chunked file data as a message to the specified topic and yield control to the event loop
+                await self._write("ChaskiFile", data=package_data, topic=topic)
+                await asyncio.sleep(0)  # very important sleep
 
     # ----------------------------------------------------------------------
-    async def _process_ChaskiFile(self, message: 'Message', edge: 'Edge') -> None:
+    async def _process_ChaskiFile(self, message: "Message", edge: "Edge") -> None:
         """
         Process an incoming ChaskiFile message and append each chunk of data to the target file.
 
@@ -444,10 +453,10 @@ class ChaskiStreamer(ChaskiNode):
             return
 
         # Append incoming file chunk data to the target file in append-binary mode
-        if chunk := message.data.pop('chunk'):
+        if chunk := message.data.pop("chunk"):
             with open(
-                os.path.join(self.destination_folder, message.data['filename']),
-                'ab',
+                os.path.join(self.destination_folder, message.data["filename"]),
+                "ab",
             ) as file:
                 # Write the current chunk to the target file in append-binary mode
                 file.write(chunk)
@@ -459,7 +468,7 @@ class ChaskiStreamer(ChaskiNode):
                 self.file_handling_callback(
                     **{
                         **message.data,
-                        'destiny_folder': self.destination_folder,
+                        "destiny_folder": self.destination_folder,
                     }
                 )
 

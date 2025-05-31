@@ -6,7 +6,6 @@ import sys
 # ----------------------------------------------------------------------
 def close_connections(port):
     """"""
-    print(f"Cleaning connections on port {port}...")
 
     try:
         # Run the lsof command to get the PIDs of active connections on the specified port
@@ -17,9 +16,7 @@ def close_connections(port):
         )
         pids = result.stdout.strip().splitlines()
 
-        if not pids:
-            print(f"No active connections on port {port}.")
-        else:
+        if pids:
             # Close all active connections
             for pid in pids:
                 print(f"Closing connection with PID {pid}...")
@@ -37,18 +34,19 @@ def main():
 
     try:
         port_range = sys.argv[1]
-        START_PORT, END_PORT = map(int, port_range.split('-'))
+        START_PORT, END_PORT = map(int, port_range.split("-"))
         if START_PORT > END_PORT:
             raise ValueError(
                 "The start port must be less than or equal to the end port."
             )
     except ValueError as e:
-        print(f"Error in port range: {e}")
-        sys.exit(1)
+        START_PORT = 65440
+        END_PORT = 65500
 
     # Iterate over the range of ports and close active connections
     for port in range(START_PORT, END_PORT + 1):
         close_connections(port)
+
 
 if __name__ == "__main__":
     main()

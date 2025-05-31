@@ -21,6 +21,7 @@ import unittest
 import asyncio
 from typing import Optional
 from chaski.utils.auto import create_nodes
+from chaski.scripts import terminate_connections
 
 
 ########################################################################
@@ -32,10 +33,13 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
     and validate the correct establishment of connections based on their subscription topics.
     """
 
-    host = '127.0.0.1'
+    host = "127.0.0.1"
+
+    def tearDown(self):
+        terminate_connections.main()
 
     # ----------------------------------------------------------------------
-    async def _close_nodes(self, nodes: list['ChaskiNode']):
+    async def _close_nodes(self, nodes: list["ChaskiNode"]):
         """
         Close all ChaskiNode instances in the provided list.
 
@@ -52,7 +56,7 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
 
     # ----------------------------------------------------------------------
     def assertConnection(
-        self, node1: 'ChaskiNode', node2: 'ChaskiNode', msg: Optional[str] = None
+        self, node1: "ChaskiNode", node2: "ChaskiNode", msg: Optional[str] = None
     ):
         """
         Assert that two ChaskiNodes are connected to each other.
@@ -81,7 +85,7 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
 
     # ----------------------------------------------------------------------
     def assertNoConnection(
-        self, node1: 'ChaskiNode', node2: 'ChaskiNode', msg: Optional[str] = None
+        self, node1: "ChaskiNode", node2: "ChaskiNode", msg: Optional[str] = None
     ):
         """
         Assert that two ChaskiNodes are not connected to each other.
@@ -128,13 +132,13 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
         AssertionError
             Raised if the nodes do not pair correctly according to their subscription topics.
         """
-        nodes = await create_nodes(['A', 'B', 'C', 'A', 'B', 'C'], port=65440)
+        nodes = await create_nodes(["A", "B", "C", "A", "B", "C"], port=65440)
         for node in nodes[1:]:
             await node._connect_to_peer(nodes[0])
 
         await asyncio.sleep(0.3)
         for node in nodes[1:]:
-            await node.discovery(on_pair='none')
+            await node.discovery(on_pair="none")
 
         await asyncio.sleep(0.3)
         self.assertConnection(
@@ -158,13 +162,15 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
     # ----------------------------------------------------------------------
     async def test_single_subscription_with_disconnect(self):
         """"""
-        nodes = await create_nodes(['A', 'B', 'C', ['A', 'C'], ['B', 'A'], 'C'], port=65450)
+        nodes = await create_nodes(
+            ["A", "B", "C", ["A", "C"], ["B", "A"], "C"], port=65450
+        )
         for node in nodes[1:]:
             await node._connect_to_peer(nodes[0])
 
         await asyncio.sleep(0.3)
         for node in nodes[1:]:
-            await node.discovery(on_pair='disconnect')
+            await node.discovery(on_pair="disconnect")
 
         await asyncio.sleep(0.3)
         self.assertConnection(
@@ -196,5 +202,5 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
         await self._close_nodes(nodes)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

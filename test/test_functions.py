@@ -22,7 +22,7 @@ import unittest
 from chaski.node import Message
 from chaski.streamer import ChaskiStreamer
 from chaski.utils.auto import run_transmission, create_nodes
-import shutil
+from chaski.scripts import terminate_connections
 
 
 ########################################################################
@@ -30,6 +30,9 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
     """"""
 
     ip = "127.0.0.1"
+
+    def tearDown(self):
+        terminate_connections.main()
 
     # ----------------------------------------------------------------------
     async def _close_nodes(self, nodes: list["ChaskiNode"]) -> None:
@@ -72,7 +75,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         -----
         This test ensures that the ping functionality between nodes works correctly and that latency is calculated and reset properly.
         """
-        nodes = await create_nodes(3, self.ip)
+        nodes = await create_nodes(3, self.ip, port=65440)
         await nodes[1].connect(nodes[0])
         await nodes[2].connect(nodes[0])
         await asyncio.sleep(0.3)
@@ -121,7 +124,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         -----
         This test ensures that the nodes' addresses are correctly set and can be retrieved accurately.
         """
-        nodes = await create_nodes(2, self.ip)
+        nodes = await create_nodes(2, self.ip, port=65450)
         await nodes[1].connect(nodes[0])
         await asyncio.sleep(0.3)
 
@@ -133,8 +136,8 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             nodes[0].edges[0].local_address[1],
-            65440,
-            "Local address of the edge should be 65440",
+            65450,
+            "Local address of the edge should be 65450",
         )
 
         await self._close_nodes(nodes)
@@ -350,7 +353,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         requesting SSL certificates from the CA and use them successfully for secure communications.
         """
         producer = ChaskiStreamer(
-            # port=65433,
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
@@ -361,7 +363,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         )
 
         consumer = ChaskiStreamer(
-            # port=65434,
             name="Consumer",
             subscriptions=["topic1"],
             reconnections=None,

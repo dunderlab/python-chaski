@@ -17,6 +17,7 @@ import os
 import asyncio
 from chaski.remote import ChaskiRemote
 import numpy as np
+from chaski.scripts import terminate_connections
 
 import logging
 
@@ -32,6 +33,9 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
     asynchronous tests. It covers different scenarios to ensure the
     ChaskiRemote class behaves as expected.
     """
+
+    def tearDown(self):
+        terminate_connections.main()
 
     # ----------------------------------------------------------------------
     async def test_module_no_available_register(self):
@@ -67,14 +71,14 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await client.connect(server.address)
         await asyncio.sleep(0.3)
 
-        os_remote = client.proxy('os')
+        os_remote = client.proxy("os")
         await asyncio.sleep(0.3)
 
         try:
             os_remote.name
-            self.fail('bad, the module has access')
+            self.fail("bad, the module has access")
         except:
-            self.assertTrue(True, 'ok, the module has not access')
+            self.assertTrue(True, "ok, the module has not access")
 
         await server.stop()
         await client.stop()
@@ -99,7 +103,7 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         """
         server = ChaskiRemote(
             port=65434,
-            available=['os'],
+            available=["os"],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
@@ -111,10 +115,10 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await client.connect(server.address)
         await asyncio.sleep(0.3)
 
-        os_remote = client.proxy('os')
+        os_remote = client.proxy("os")
         await asyncio.sleep(0.3)
 
-        self.assertIsInstance(os_remote.listdir('.'), list)
+        self.assertIsInstance(os_remote.listdir("."), list)
         self.assertEqual(str(os_remote.name), os.name)
 
         await server.stop()
@@ -125,7 +129,7 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         """"""
         server = ChaskiRemote(
             port=65434,
-            available=['os'],
+            available=["os"],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
@@ -137,11 +141,11 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await client.connect(server.address)
         await asyncio.sleep(0.3)
 
-        os_remote = client.proxy('os')
+        os_remote = client.proxy("os")
         await asyncio.sleep(0.3)
 
         for _ in range(10):
-            self.assertIsInstance(os_remote.listdir('.'), list)
+            self.assertIsInstance(os_remote.listdir("."), list)
             self.assertEqual(str(os_remote.name), os.name)
             self.assertEqual(os_remote.name._, os.name)
 
@@ -153,7 +157,7 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         """"""
         server = ChaskiRemote(
             port=65434,
-            available=['numpy'],
+            available=["numpy"],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
@@ -165,7 +169,7 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await client.connect(server.address)
         await asyncio.sleep(0.3)
 
-        np_remote = client.proxy('numpy')
+        np_remote = client.proxy("numpy")
         await asyncio.sleep(0.3)
 
         self.assertIsInstance(np_remote.pi._, float)
@@ -181,5 +185,5 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await client.stop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
