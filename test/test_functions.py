@@ -19,7 +19,7 @@ import os
 import ssl
 import asyncio
 import unittest
-from chaski.node import Message
+from chaski.node import Message, ChaskiNode
 from chaski.streamer import ChaskiStreamer
 from chaski.utils.auto import run_transmission, create_nodes
 from chaski.scripts import terminate_connections
@@ -35,7 +35,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         terminate_connections.main()
 
     # ----------------------------------------------------------------------
-    async def _close_nodes(self, nodes: list["ChaskiNode"]) -> None:
+    async def _close_nodes(self, nodes: list[ChaskiNode]) -> None:
         """
         Close all ChaskiNode instances in the provided list.
 
