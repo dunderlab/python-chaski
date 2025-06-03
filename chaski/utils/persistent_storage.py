@@ -2,11 +2,11 @@ import os
 import sqlite3
 import time
 import json
-from platformdirs import user_data_dir
 from typing import Any, Optional
 
+from chaski.utils import user_data_dir
 
-########################################################################
+
 class PersistentStorage:
     """
     A class for persistent storage using SQLite.
@@ -42,7 +42,6 @@ class PersistentStorage:
         self.conn = sqlite3.connect(self.storage_path)
         self._initialize_table()
 
-    # ----------------------------------------------------------------------
     def _initialize_table(self) -> None:
         """Initialize the SQLite table if it does not already exist."""
         with self.conn:
@@ -56,7 +55,6 @@ class PersistentStorage:
                 """
             )
 
-    # ----------------------------------------------------------------------
     def _cleanup_expired(self) -> None:
         """Remove expired entries from the storage."""
         current_time = time.time()
@@ -66,7 +64,6 @@ class PersistentStorage:
                 (current_time,),
             )
 
-    # ----------------------------------------------------------------------
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         """
         Store a value with an optional expiration time.
@@ -91,7 +88,6 @@ class PersistentStorage:
                 (key, value_json, expires_at),
             )
 
-    # ----------------------------------------------------------------------
     def get(self, key: str, default: Optional[Any] = None) -> Any:
         """
         Retrieve a value by its key.
@@ -124,7 +120,6 @@ class PersistentStorage:
             return default
         return json.loads(value)
 
-    # ----------------------------------------------------------------------
     def pop(self, key: str, default: Optional[Any] = None) -> Any:
         """
         Retrieve and delete a value by its key.
@@ -146,7 +141,6 @@ class PersistentStorage:
             self.delete(key)
         return value
 
-    # ----------------------------------------------------------------------
     def delete(self, key: str) -> None:
         """
         Delete a value by its key.
@@ -166,7 +160,6 @@ class PersistentStorage:
         if cursor.rowcount == 0:
             raise KeyError(f"Key '{key}' not found in PersistentStorage.")
 
-    # ----------------------------------------------------------------------
     def exists(self, key: str) -> bool:
         """
         Check if a key exists.
@@ -187,7 +180,6 @@ class PersistentStorage:
         cursor = self.conn.execute("SELECT 1 FROM storage WHERE key = ?", (key,))
         return cursor.fetchone() is not None
 
-    # ----------------------------------------------------------------------
     def keys(self) -> list[str]:
         """
         Retrieve all keys in the storage.
@@ -201,13 +193,11 @@ class PersistentStorage:
         cursor = self.conn.execute("SELECT key FROM storage")
         return [row[0] for row in cursor]
 
-    # ----------------------------------------------------------------------
     def clear(self) -> None:
         """Remove all keys and values from the storage."""
         with self.conn:
             self.conn.execute("DELETE FROM storage")
 
-    # ----------------------------------------------------------------------
     def close(self) -> None:
         """Close the SQLite connection."""
         self.conn.close()

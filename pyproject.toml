@@ -32,7 +32,6 @@ classifiers = [
 ]
 
 dependencies = [
-    "platformdirs",
 ]
 
 [project.urls]

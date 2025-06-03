@@ -35,7 +35,6 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-# ----------------------------------------------------------------------
 async def run():
     """"""
     server = ChaskiRemote(
@@ -50,7 +49,6 @@ async def run():
     await server.run()
 
 
-# ----------------------------------------------------------------------
 def main():
     """"""
     asyncio.run(run())

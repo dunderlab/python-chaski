@@ -31,7 +31,6 @@ from chaski.scripts import terminate_connections
 from chaski.node import ChaskiNode
 
 
-########################################################################
 class _TestConnections:
     """
     Base class for testing connection-related functionality between ChaskiNode instances.
@@ -45,7 +44,6 @@ class _TestConnections:
     def tearDown(self):
         terminate_connections.main()
 
-    # ----------------------------------------------------------------------
     async def _close_nodes(self, nodes: list[ChaskiNode]):
         """
         Close all ChaskiNode instances in the provided list.
@@ -62,7 +60,6 @@ class _TestConnections:
             await asyncio.sleep(0.3)
             await node.stop()
 
-    # ----------------------------------------------------------------------
     def assertConnection(
         self, node1: "ChaskiNode", node2: ChaskiNode, msg: Optional[str] = None
     ):
@@ -91,7 +88,6 @@ class _TestConnections:
         conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
         return self.assertTrue(conn, msg)
 
-    # ----------------------------------------------------------------------
     async def test_single_connections(self):
         """
         Test single connections between ChaskiNodes.
@@ -121,7 +117,6 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_multiple_connections(self):
         """
         Test multiple connections to a single ChaskiNode.
@@ -157,7 +152,6 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_disconnection(self):
         """
         Test disconnection of nodes.
@@ -193,7 +187,6 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_edges_disconnection(self):
         """
         Test progressive disconnection of nodes from edge nodes.
@@ -240,7 +233,6 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_edges_client_orphan(self):
         """
         Test when client-edge nodes become orphaned.
@@ -286,7 +278,6 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_edges_server_orphan(self):
         """
         Test when server-edge nodes become orphaned.
@@ -333,7 +324,6 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_response_udp(self):
         """
         Test the UDP response mechanism of ChaskiNodes.
@@ -370,7 +360,6 @@ class _TestConnections:
         await self._close_nodes(nodes)
 
 
-########################################################################
 class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCase):
     """
     Unit tests for testing connections between ChaskiNode instances using IPv4.
@@ -408,7 +397,6 @@ class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCa
         Evaluates the handling of server-edge nodes becoming orphaned over IPv4.
     """
 
-    # ----------------------------------------------------------------------
     async def asyncSetUp(self) -> None:
         """
         Initialize the test environment for IPv4 connections.
@@ -445,7 +433,6 @@ class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCa
         return await super().test_response_udp()
 
 
-########################################################################
 class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnections):
     """
     Unit tests for testing connections between ChaskiNode instances using IPv6.
@@ -483,7 +470,6 @@ class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnectio
         Evaluates the handling of server-edge nodes becoming orphaned over IPv6.
     """
 
-    # ----------------------------------------------------------------------
     async def asyncSetUp(self) -> None:
         """
         Initialize the test environment for IPv6 connections.

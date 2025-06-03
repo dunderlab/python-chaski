@@ -38,7 +38,6 @@ from cryptography.hazmat.primitives import serialization
 from chaski.utils.certificate_authority import CertificateAuthority
 
 
-########################################################################
 class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
     """"""
 
@@ -48,7 +47,6 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
     # name = "4c535672-949e-480f-9df4-9548a4cc2c1f"
 
     @classmethod
-    # ----------------------------------------------------------------------
     def setUpClass(cls) -> None:
         """Set up the class for the Certificate Authority tests.
 
@@ -66,7 +64,6 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         if not os.path.exists(cls.ssl_certificates_location):
             os.mkdir(cls.ssl_certificates_location)
 
-    # ----------------------------------------------------------------------
     @property
     def ca(self) -> CertificateAuthority:
         """Create and return a CertificateAuthority instance.
@@ -95,7 +92,6 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         )
         return ca
 
-    # ----------------------------------------------------------------------
     def test_ca(self) -> None:
         """Test the creation of CA certificate and private key.
 
@@ -147,7 +143,6 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
                 f"The private key does not correspond to the certificate: {str(e)}",
             )
 
-    # ----------------------------------------------------------------------
     def test_csr(self) -> None:
         """Test the generation of private keys and CSRs.
 
@@ -220,7 +215,6 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
             "Server key modulus does not match Server CSR modulus",
         )
 
-    # ----------------------------------------------------------------------
     def test_sign(self) -> None:
         """Test signing of client and server CSRs by the CA.
 

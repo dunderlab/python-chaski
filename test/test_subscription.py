@@ -25,7 +25,6 @@ from chaski.scripts import terminate_connections
 from chaski.node import ChaskiNode
 
 
-########################################################################
 class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
     """
     Test case for testing a single subscription scenario in ChaskiNodes.
@@ -39,7 +38,6 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         terminate_connections.main()
 
-    # ----------------------------------------------------------------------
     async def _close_nodes(self, nodes: list[ChaskiNode]):
         """
         Close all ChaskiNode instances in the provided list.
@@ -55,7 +53,6 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
         for node in nodes:
             await node.stop()
 
-    # ----------------------------------------------------------------------
     def assertConnection(
         self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
     ):
@@ -84,7 +81,6 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
         conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
         return self.assertTrue(conn, msg)
 
-    # ----------------------------------------------------------------------
     def assertNoConnection(
         self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
     ):
@@ -113,7 +109,6 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
         conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
         return self.assertFalse(conn, msg)
 
-    # ----------------------------------------------------------------------
     async def test_single_subscription_no_disconnect(self):
         """
         Test single subscription connections between ChaskiNodes without disconnecting other nodes.
@@ -160,7 +155,6 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_single_subscription_with_disconnect(self):
         """"""
         nodes = await create_nodes(

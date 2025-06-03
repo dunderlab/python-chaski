@@ -8,7 +8,6 @@ from celery.app import backends
 from chaski.streamer_sync import ChaskiStreamerSync
 
 
-########################################################################
 class ChaskiBackend(BaseBackend):
     """
     A custom Celery backend using ChaskiStreamerSync for task results.
@@ -35,7 +34,6 @@ class ChaskiBackend(BaseBackend):
             os.getenv("CHASKI_STREAMER_ROOT", "*ChaskiStreamer@127.0.0.1:65433")
         )
 
-    # ----------------------------------------------------------------------
     def _store_result(
         self,
         task_id: str,
@@ -79,7 +77,6 @@ class ChaskiBackend(BaseBackend):
         )
         return result
 
-    # ----------------------------------------------------------------------
     def _get_task_meta_for(self, task_id: str) -> Dict[str, Any]:
         """
         Retrieve the metadata for a given task.
@@ -108,7 +105,6 @@ class ChaskiBackend(BaseBackend):
             self.storage.fetch_storage(task_id)
             return {"status": "PENDING", "result": None}
 
-    # ----------------------------------------------------------------------
     def cleanup(self) -> None:
         """
         Clear all cached results from the backend.

@@ -23,7 +23,6 @@ from typing import Generator, Any
 from chaski.streamer import ChaskiStreamer
 
 
-########################################################################
 class ChaskiStreamerSync:
     """
     ChaskiStreamerSync: Synchronous Wrapper for ChaskiStreamer.
@@ -50,7 +49,6 @@ class ChaskiStreamerSync:
         allowing access to its methods and properties.
     """
 
-    # ----------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
         """Initialize a new instance of ChaskiStreamerSync.
 
@@ -84,7 +82,6 @@ class ChaskiStreamerSync:
             self.streamer.run(), self.loop
         )  # Schedule the streamer to run in the event loop
 
-    # ----------------------------------------------------------------------
     def __repr__(self):
         """
         Provide a string representation of the ChaskiStreamerSync instance.
@@ -96,7 +93,6 @@ class ChaskiStreamerSync:
         h = "*" if self.paired else ""
         return h + self.address.replace("ChaskiStreamer", "ChaskiStreamerSync")
 
-    # ----------------------------------------------------------------------
     def _start_loop(self, loop: asyncio.AbstractEventLoop) -> None:
         """Start the event loop.
 
@@ -125,7 +121,6 @@ class ChaskiStreamerSync:
         asyncio.set_event_loop(loop)
         loop.run_forever()
 
-    # ----------------------------------------------------------------------
     def close(self) -> None:
         """Close the ChaskiStreamerSync instance.
 
@@ -146,7 +141,6 @@ class ChaskiStreamerSync:
         self.loop.call_soon_threadsafe(self.loop.stop)
         self.thread.join()
 
-    # ----------------------------------------------------------------------
     def __getattr__(self, attr: str) -> Any:
         """Retrieve an attribute from the ChaskiStreamer instance.
 
@@ -188,7 +182,6 @@ class ChaskiStreamerSync:
         else:
             return object_
 
-    # ----------------------------------------------------------------------
     def message_stream(self, timeout=None) -> Generator:
         """
         Generator to yield messages from the streamer's message queue.

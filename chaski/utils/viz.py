@@ -17,7 +17,6 @@ from chaski.node import ChaskiNode
 import seaborn as sns
 
 
-# ----------------------------------------------------------------------
 def display_graph(
     nodes: List[ChaskiNode], layout=nx.circular_layout, show_latencies=False
 ) -> None:
@@ -34,12 +33,12 @@ def display_graph(
     # Prepare nodes for graph representation
     nodes_ = [
         {
-            'name': node.name,
-            'paired': all(
+            "name": node.name,
+            "paired": all(
                 [node.paired_event[sub].is_set() for sub in node.subscriptions]
             ),
-            'subscriptions': f"{{{''.join(node.subscriptions)}}}",
-            'server_pairs': {v.name: v.latency for v in node.edges},
+            "subscriptions": f"{{{''.join(node.subscriptions)}}}",
+            "server_pairs": {v.name: v.latency for v in node.edges},
         }
         for node in nodes
     ]
@@ -54,14 +53,14 @@ def display_graph(
     # Graph display options
     options = {
         "with_labels": False,
-        "node_color": '#6DA58A',
-        'edgecolors': ['#008080' if node['paired'] else '#6DA58A' for node in nodes_],
-        'linewidths': 5,
+        "node_color": "#6DA58A",
+        "edgecolors": ["#008080" if node["paired"] else "#6DA58A" for node in nodes_],
+        "linewidths": 5,
         "edge_color": "#B3B3BD",
         "width": 3,
         "node_size": 1500,
-        "font_color": '#ffffff',
-        "font_family": 'Noto Sans',
+        "font_color": "#ffffff",
+        "font_family": "Noto Sans",
         "font_size": 11,
         "pos": pos,
     }
@@ -76,23 +75,23 @@ def display_graph(
 
     nx.draw(G, ax=ax1, **options)
 
-    labels = {node['name']: node['name'] for node in nodes_}
+    labels = {node["name"]: node["name"] for node in nodes_}
     nx.draw_networkx_labels(
         G,
         {k: pos[k] + np.array([0.0, 0.03]) for k in pos},
         labels,
         ax=ax1,
-        font_color='#ffffff',
+        font_color="#ffffff",
         font_size=11,
     )
 
-    labels = {node['name']: node['subscriptions'] for node in nodes_}
+    labels = {node["name"]: node["subscriptions"] for node in nodes_}
     nx.draw_networkx_labels(
         G,
         {k: pos[k] + np.array([0.0, -0.02]) for k in pos},
         labels,
         ax=ax1,
-        font_color='#ffffff',
+        font_color="#ffffff",
         font_size=8,
     )
 
@@ -116,20 +115,19 @@ def display_graph(
     # Display log statistics
     font_options = {
         "fontsize": 12,
-        "fontfamily": 'Noto Sans Mono',
-        "fontweight": 'normal',
-        "ha": 'left',
+        "fontfamily": "Noto Sans Mono",
+        "fontweight": "normal",
+        "ha": "left",
         "color": "#0B5D37",
     }
     if show_latencies:
         ax2 = plt.subplot2grid((3, 5), (2, 4), colspan=1)
         ax2.text(0, 1, log, **font_options)
-        ax2.axis('off')
+        ax2.axis("off")
 
     plt.show()
 
 
-# ----------------------------------------------------------------------
 def display_heatmap(nodes: List[ChaskiNode], show=True) -> None:
     """
     Display a heatmap of latencies between nodes.
@@ -180,7 +178,7 @@ def display_heatmap(nodes: List[ChaskiNode], show=True) -> None:
         cbar=True,
         linewidths=0.5,
     )
-    plt.title('Latency Heatmap')
+    plt.title("Latency Heatmap")
     # plt.xlabel('Nodes')
     # plt.ylabel('Nodes')
     plt.show()
@@ -190,7 +188,7 @@ def display_subscriptions_graph(
     nodes: List[ChaskiNode],
     layout=nx.spring_layout,
     show_latencies=False,
-    chain='_CHAIN_',
+    chain="_CHAIN_",
 ) -> None:
     """
     Display the network graph and latency statistics.
@@ -205,13 +203,13 @@ def display_subscriptions_graph(
     # Prepare nodes for graph representation
     nodes_ = [
         {
-            'name': node.name,
-            'paired': all(
+            "name": node.name,
+            "paired": all(
                 [node.paired_event[sub].is_set() for sub in node.subscriptions]
             ),
-            'group': sorted(list(node.subscriptions))[0],
-            'subscriptions': f"{{{','.join(node.subscriptions.difference({chain}))}}}",
-            'server_pairs': {v.name: v.latency for v in node.edges},
+            "group": sorted(list(node.subscriptions))[0],
+            "subscriptions": f"{{{','.join(node.subscriptions.difference({chain}))}}}",
+            "server_pairs": {v.name: v.latency for v in node.edges},
         }
         for node in nodes
     ]
@@ -245,7 +243,7 @@ def display_subscriptions_graph(
 
     # Se asignan colores a cada nodo según su grupo
     node_colors_dict = {
-        nd['name']: get_subscription_color(nd['group']) for nd in nodes_
+        nd["name"]: get_subscription_color(nd["group"]) for nd in nodes_
     }
     node_colors = [node_colors_dict[name] for name in G.nodes]
 
@@ -260,8 +258,8 @@ def display_subscriptions_graph(
         "width": 3,
         # "node_size": 1100,
         "node_size": 1800,
-        "font_color": '#ffffff',
-        "font_family": 'Noto Sans',
+        "font_color": "#ffffff",
+        "font_family": "Noto Sans",
         "font_size": 11,
         "pos": pos,
     }
@@ -276,23 +274,23 @@ def display_subscriptions_graph(
 
     nx.draw(G, ax=ax1, **options)
 
-    labels = {node['name']: node['name'] for node in nodes_}
+    labels = {node["name"]: node["name"] for node in nodes_}
     nx.draw_networkx_labels(
         G,
         {k: pos[k] + np.array([0.0, 0.03]) for k in pos},
         labels,
         ax=ax1,
-        font_color='#ffffff',
+        font_color="#ffffff",
         font_size=11,
     )
 
-    labels = {node['name']: node['subscriptions'] for node in nodes_}
+    labels = {node["name"]: node["subscriptions"] for node in nodes_}
     nx.draw_networkx_labels(
         G,
         {k: pos[k] + np.array([0.0, -0.02]) for k in pos},
         labels,
         ax=ax1,
-        font_color='#ffffff',
+        font_color="#ffffff",
         font_size=8,
     )
 
@@ -316,14 +314,14 @@ def display_subscriptions_graph(
     # Display log statistics
     font_options = {
         "fontsize": 12,
-        "fontfamily": 'Noto Sans Mono',
-        "fontweight": 'normal',
-        "ha": 'left',
+        "fontfamily": "Noto Sans Mono",
+        "fontweight": "normal",
+        "ha": "left",
         "color": "#0B5D37",
     }
     if show_latencies:
         ax2 = plt.subplot2grid((3, 5), (2, 4), colspan=1)
         ax2.text(0, 1, log, **font_options)
-        ax2.axis('off')
+        ax2.axis("off")
 
     plt.show()

@@ -3,7 +3,6 @@ import re
 import logging
 import ipaddress
 import asyncio
-from platformdirs import user_data_dir
 
 from chaski.node import ChaskiNode
 from chaski.utils.certificate_authority import CertificateAuthority
@@ -12,11 +11,9 @@ from chaski.utils.debug import styled_logger
 logger_ca = styled_logger(logging.getLogger("ChaskiCA"))
 
 
-########################################################################
 class ChaskiCA(ChaskiNode):
     """"""
 
-    # ----------------------------------------------------------------------
     def __init__(self, *args: tuple, **kwargs: dict):
         """
         Initialize a new instance of ChaskiCA.
@@ -46,7 +43,6 @@ class ChaskiCA(ChaskiNode):
         # Ensure that the CA's private key and certificate are properly set up
         self.ca.setup_certificate_authority()
 
-    # ----------------------------------------------------------------------
     @property
     def address(self) -> str:
         """
@@ -62,7 +58,6 @@ class ChaskiCA(ChaskiNode):
         """
         return f"ChaskiCA@{self.ip}:{self.port}"
 
-    # ----------------------------------------------------------------------
     async def sign_csr(
         self, csr_data_client: bytes, csr_data_server: bytes, node_id: str
     ) -> dict:
@@ -103,9 +98,9 @@ class ChaskiCA(ChaskiNode):
         # and the path to the CA certificate. This dictionary will be returned as the result
         # of the CSR signing process.
         data = {
-            'signed_csr_client': signed_csr_client,
-            'signed_csr_server': signed_csr_server,
-            'ca_certificate_path': self.ca.load_certificate(
+            "signed_csr_client": signed_csr_client,
+            "signed_csr_server": signed_csr_server,
+            "ca_certificate_path": self.ca.load_certificate(
                 self.ca.ca_certificate_path
             ),
         }

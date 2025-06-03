@@ -1,14 +1,12 @@
 import sys
 import unittest
 
-sys.path.append('tasks')
+sys.path.append("tasks")
 
 
-########################################################################
 class TestCelery(unittest.IsolatedAsyncioTestCase):
     """"""
 
-    # ----------------------------------------------------------------------
     async def test_task(self):
         """"""
         from tasks import add

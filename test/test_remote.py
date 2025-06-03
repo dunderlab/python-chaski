@@ -24,7 +24,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 
-########################################################################
 class TestRemote(unittest.IsolatedAsyncioTestCase):
     """
     A test case for testing the ChaskiRemote class functionality.
@@ -37,7 +36,6 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         terminate_connections.main()
 
-    # ----------------------------------------------------------------------
     async def test_module_no_available_register(self):
         """
         Test absence of module registration.
@@ -83,7 +81,6 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await server.stop()
         await client.stop()
 
-    # ----------------------------------------------------------------------
     async def test_module_register(self):
         """
         Test the registration and remote access of a specified module.
@@ -124,7 +121,6 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await server.stop()
         await client.stop()
 
-    # ----------------------------------------------------------------------
     async def test_secuential_calls(self):
         """
         Test multiple sequential calls to a remote module.
@@ -163,7 +159,6 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await server.stop()
         await client.stop()
 
-    # ----------------------------------------------------------------------
     async def test_numpy_calls(self):
         """
         Test remote access to numpy functionality.

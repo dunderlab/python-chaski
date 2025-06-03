@@ -25,7 +25,6 @@ from chaski.utils.auto import run_transmission, create_nodes
 from chaski.scripts import terminate_connections
 
 
-########################################################################
 class TestFunctions(unittest.IsolatedAsyncioTestCase):
     """"""
 
@@ -34,7 +33,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         terminate_connections.main()
 
-    # ----------------------------------------------------------------------
     async def _close_nodes(self, nodes: list[ChaskiNode]) -> None:
         """
         Close all ChaskiNode instances in the provided list.
@@ -51,7 +49,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
             await asyncio.sleep(0.3)
             await node.stop()
 
-    # ----------------------------------------------------------------------
     async def test_ping(self) -> None:
         """
         Test the ping functionality between ChaskiNode instances.
@@ -102,7 +99,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_address(self) -> None:
         """
         Test the correctness of node addresses.
@@ -142,7 +138,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_message_ttl(self) -> None:
         """
         Test the time-to-live (TTL) functionality of messages.
@@ -173,7 +168,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
             "The TTL should be decremented by 2 from the initial value of 10",
         )
 
-    # ----------------------------------------------------------------------
     async def test_ssl_certificate(self) -> None:
         """
         Test the SSL certificate configuration for secure communication.
@@ -273,7 +267,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
-    # ----------------------------------------------------------------------
     async def test_ssl_certificate_CA(self) -> None:
         """
         Test requesting SSL certificates from the Certificate Authority (CA).
@@ -324,7 +317,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
-    # ----------------------------------------------------------------------
     async def test_ssl_certificate_CA_inline(self) -> None:
         """
         Test the inline requesting of SSL certificates from the Certificate Authority (CA).
@@ -374,7 +366,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
-    # ----------------------------------------------------------------------
     async def test_ssl_certificate_CA_off(self) -> None:
         """
         Test the behavior of requesting SSL certificates from a non-existent CA.

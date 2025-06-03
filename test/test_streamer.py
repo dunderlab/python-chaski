@@ -17,7 +17,6 @@ from chaski.utils.auto import run_transmission
 from chaski.scripts import terminate_connections
 
 
-########################################################################
 class TestStreamer(unittest.IsolatedAsyncioTestCase):
     """
     This class contains unit tests for the ChaskiStreamer functionality.
@@ -31,7 +30,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         terminate_connections.main()
 
-    # ----------------------------------------------------------------------
     async def test_stream(self) -> None:
         """
         Test the streaming functionality between a producer and a consumer.
@@ -64,7 +62,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
-    # ----------------------------------------------------------------------
     async def test_file_transfer(self) -> None:
         """
         Test the file transfer functionality between a producer and a consumer.
@@ -156,7 +153,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         await consumer.stop()
         await producer.stop()
 
-    # ----------------------------------------------------------------------
     async def test_file_dissable_transfer(self) -> None:
         """
         Test the file transfer functionality when the consumer has file transfer disabled.
@@ -217,7 +213,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         await consumer.stop()
         await producer.stop()
 
-    # ----------------------------------------------------------------------
     async def test_stream_chain(self) -> None:
         """
         Test chaining of multiple ChaskiStreamer instances end-to-end.
@@ -317,7 +312,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         await chain4.stop()
         await chain5.stop()
 
-    # ----------------------------------------------------------------------
     async def test_root_node(self) -> None:
         """
         Test chaining of multiple ChaskiStreamer instances end-to-end.

@@ -35,7 +35,6 @@ logger_remote = styled_logger(logging.getLogger("ChaskiRemote"))
 nest_asyncio.apply()
 
 
-########################################################################
 class ChaskiObjectProxying(object):
     """
     This class provides proxying capabilities for enabling remote method invocation
@@ -54,14 +53,13 @@ class ChaskiObjectProxying(object):
 
     # Special method names that will be intercepted by the ChaskiObjectProxying class
     _special_names = [
-        '__call__',
-        '__reduce__',
-        '__reduce_ex__',
-        '__repr__',
-        'next',
+        "__call__",
+        "__reduce__",
+        "__reduce_ex__",
+        "__repr__",
+        "next",
     ]
 
-    # ----------------------------------------------------------------------
     def __init__(self, name: str, obj: Any, instance: Any):
         """
         Initialize an `ChaskiObjectProxying` instance.
@@ -90,7 +88,6 @@ class ChaskiObjectProxying(object):
         object.__setattr__(self, "_instance", instance)
         object.__setattr__(self, "_argskwargs", True)
 
-    # ----------------------------------------------------------------------
     @classmethod
     def _create_class_proxy(cls, theclass: type) -> type:
         """
@@ -124,12 +121,12 @@ class ChaskiObjectProxying(object):
             def method(self, *args, **kwargs):
                 # Set _chain attribute of the _instance to restart the chain from the initial element
 
-                if object.__getattribute__(self, '_argskwargs'):
+                if object.__getattribute__(self, "_argskwargs"):
 
                     try:
                         obj = getattr(
                             object.__getattribute__(self, "_instance"),
-                            'processor_method',
+                            "processor_method",
                         )(
                             object.__getattribute__(self, "_instance"),
                             args,
@@ -140,23 +137,19 @@ class ChaskiObjectProxying(object):
                         if "object is not callable" in str(e):
                             try:
                                 obj = getattr(
-                                    object.__getattribute__(
-                                        self, "_instance"
-                                    ),
-                                    'processor_method',
+                                    object.__getattribute__(self, "_instance"),
+                                    "processor_method",
                                 )()
                             except Exception as e:
                                 obj = getattr(
-                                    object.__getattribute__(
-                                        self, "_instance"
-                                    ),
-                                    'processor_method',
+                                    object.__getattribute__(self, "_instance"),
+                                    "processor_method",
                                 )
 
                 else:
                     obj = getattr(
                         object.__getattribute__(self, "_instance"),
-                        'processor_method',
+                        "processor_method",
                     )(
                         object.__getattribute__(self, "_instance"),
                         False,
@@ -165,11 +158,11 @@ class ChaskiObjectProxying(object):
 
                 setattr(
                     object.__getattribute__(self, "_instance"),
-                    '_chain',
+                    "_chain",
                     [
                         getattr(
                             object.__getattribute__(self, "_instance"),
-                            '_chain',
+                            "_chain",
                         )[0]
                     ],
                 )
@@ -188,11 +181,8 @@ class ChaskiObjectProxying(object):
 
         # Return a new proxy class that wraps the specified class type, enabling method
         # calls to be intercepted and processed through the proxy mechanism.
-        return type(
-            f"{cls.__name__}({theclass.__name__})", (cls,), namespace
-        )
+        return type(f"{cls.__name__}({theclass.__name__})", (cls,), namespace)
 
-    # ----------------------------------------------------------------------
     def __new__(cls, obj: Any, *args: Any, **kwargs: Any) -> Any:
         """
         Create a new instance of the class, potentially a class proxy.
@@ -231,9 +221,7 @@ class ChaskiObjectProxying(object):
         except KeyError:
             # Check if the proxy class for the object's class type exists in the cache;
             # if not, create the proxy class and cache it for future use.
-            cache[obj.__class__] = theclass = cls._create_class_proxy(
-                obj.__class__
-            )
+            cache[obj.__class__] = theclass = cls._create_class_proxy(obj.__class__)
 
         # Create a new instance of the class proxy for the given object
         return object.__new__(theclass)
@@ -241,7 +229,6 @@ class ChaskiObjectProxying(object):
         # theclass.__init__(ins, obj, *args, **kwargs)
         # return ins
 
-    # ----------------------------------------------------------------------
     # This code block defines custom attribute and method handling for a proxied object.
     # It overrides attribute access, deletion, assignment, and several special methods
     # to delegate these operations to the actual proxied object.
@@ -487,7 +474,6 @@ class ChaskiObjectProxying(object):
     def __iter__(self):
         return iter(object.__getattribute__(self, "_obj"))
 
-    # ----------------------------------------------------------------------
     @property
     def _(self) -> Any:
         """
@@ -506,7 +492,6 @@ class ChaskiObjectProxying(object):
             object.__getattribute__(self, "_obj")
         )
 
-    # ----------------------------------------------------------------------
     def __enter__(self) -> Any:
         """
         Enter the context manager.
@@ -521,7 +506,6 @@ class ChaskiObjectProxying(object):
         """
         return self._
 
-    # ----------------------------------------------------------------------
     def __exit__(self, *args: Any, **kwargs: Any) -> None:
         """
         Exit the context manager.
@@ -532,7 +516,6 @@ class ChaskiObjectProxying(object):
         pass
 
 
-########################################################################
 class ChaskiProxy:
     """
     A class that represents a proxy for remote method invocation.
@@ -542,7 +525,6 @@ class ChaskiProxy:
     invocation, enabling seamless distributed computations.
     """
 
-    # ----------------------------------------------------------------------
     def __init__(
         self,
         name: str,
@@ -550,7 +532,7 @@ class ChaskiProxy:
         obj: Optional[Any] = None,
         edge: Optional[Any] = None,
         chain: Optional[list[str]] = None,
-        root: Optional['ChaskiProxy'] = None,
+        root: Optional["ChaskiProxy"] = None,
     ):
         """
         Initialize a `ChaskiProxy` instance.
@@ -589,7 +571,6 @@ class ChaskiProxy:
         else:
             self._chain = chain
 
-    # ----------------------------------------------------------------------
     def __repr__(self) -> str:
         """
         Provide a string representation of the ChaskiProxy instance.
@@ -608,7 +589,6 @@ class ChaskiProxy:
         """
         return f"ChaskiProxy({self._name}:{'remote' if self._obj else 'local'}, {self._node.address})"
 
-    # ----------------------------------------------------------------------
     def _reset(self) -> None:
         """
         Reset the attribute chain to its initial state.
@@ -621,7 +601,6 @@ class ChaskiProxy:
         """
         self._chain = [self._chain[0]]
 
-    # ----------------------------------------------------------------------
     def _object(self, obj_chain: list[str]) -> Any:
         """
         Retrieve the object specified by the chain of attribute names.
@@ -650,7 +629,6 @@ class ChaskiProxy:
             obj = getattr(obj, obj_)
         return obj
 
-    # ----------------------------------------------------------------------
     def __get__(self, instance: Any, owner: Any) -> ChaskiObjectProxying:
         """
         Retrieve the proxied attribute for the instance.
@@ -679,7 +657,6 @@ class ChaskiProxy:
             instance=instance,
         )
 
-    # ----------------------------------------------------------------------
     def __getattr__(self, attr: str) -> Any:
         """
         Retrieve the attribute of the proxy object.
@@ -699,15 +676,15 @@ class ChaskiProxy:
             The proxy object itself, allowing for chained attribute access.
         """
         # If the requested attribute starts with an underscore, returning None.
-        if attr.startswith('_'):
+        if attr.startswith("_"):
             return None
 
         # If the proxied object is not yet fully resolved, append the attribute to the chain.
-        if not getattr(self, '_obj'):
-            setattr(self, '_chain', getattr(self, '_chain') + [attr])
+        if not getattr(self, "_obj"):
+            setattr(self, "_chain", getattr(self, "_chain") + [attr])
 
             # If this is the root proxy, create a new ChaskiProxy for the current attribute
-            if getattr(self, '_root') is None:
+            if getattr(self, "_root") is None:
                 proxy = ChaskiProxy(
                     name=self._name,
                     node=self._node,
@@ -736,7 +713,6 @@ class ChaskiProxy:
         # Otherwise, returning the ChaskitProxy itself, facilitating chained attribute access.
         return getattr(self, attr)
 
-    # ----------------------------------------------------------------------
     def _cleanup_dynamic_attribute(self, attr) -> None:
         """
         Clean up the attributes of the proxy class.
@@ -759,7 +735,6 @@ class ChaskiProxy:
         except AttributeError:
             pass
 
-    # ----------------------------------------------------------------------
     @property
     def _proxy_get(self) -> Any:
         """
@@ -776,7 +751,6 @@ class ChaskiProxy:
         """
         return self.processor_method()
 
-    # ----------------------------------------------------------------------
     def processor_method(
         self,
         instance=None,
@@ -818,17 +792,17 @@ class ChaskiProxy:
         """
 
         data = {
-            'name': copy(self._chain[0]),
-            'obj': copy(self._chain[1:]),
-            'args': copy(args),
-            'kwargs': copy(kwargs),
-            'timestamp': datetime.now(),
+            "name": copy(self._chain[0]),
+            "obj": copy(self._chain[1:]),
+            "args": copy(args),
+            "kwargs": copy(kwargs),
+            "timestamp": datetime.now(),
         }
 
         # This block synchronously executes an asynchronous request to perform a remote method call on the proxied object.
         status, response = asyncio.get_event_loop().run_until_complete(
             self._node._generic_request_udp(
-                callback='_call_obj_by_proxy',
+                callback="_call_obj_by_proxy",
                 kwargs=data,
                 edge=self._edge,
             )
@@ -842,15 +816,14 @@ class ChaskiProxy:
         # Depending on the status, return the deserialized object, raise an exception,
         # or return a textual representation of the object.
         match status:
-            case 'serialized':
+            case "serialized":
                 return self._node.deserializer(response)
-            case 'exception':
+            case "exception":
                 raise Exception(response)
-            case 'repr':
+            case "repr":
                 return response
 
 
-########################################################################
 class ChaskiRemote(ChaskiNode):
     """
     Represents a remote Chaski node.
@@ -860,7 +833,6 @@ class ChaskiRemote(ChaskiNode):
     It maintains a dictionary of proxy objects associated with the services to be accessed remotely.
     """
 
-    # ----------------------------------------------------------------------
     def __init__(
         self,
         available: Optional[str] = None,
@@ -888,7 +860,6 @@ class ChaskiRemote(ChaskiNode):
         self.available = available
         self.proxy_lock = asyncio.Lock()
 
-    # ----------------------------------------------------------------------
     def __repr__(self) -> str:
         """
         Represent the ChaskiRemote node as a string.
@@ -903,10 +874,9 @@ class ChaskiRemote(ChaskiNode):
             The representation of the ChaskiRemote node, optionally prefixed
             with an asterisk if paired.
         """
-        h = '*' if self.paired else ''
+        h = "*" if self.paired else ""
         return h + self.address
 
-    # ----------------------------------------------------------------------
     @property
     def address(self) -> str:
         """
@@ -922,7 +892,6 @@ class ChaskiRemote(ChaskiNode):
         """
         return f"ChaskiRemote@{self.ip}:{self.port}"
 
-    # ----------------------------------------------------------------------
     def register_module(self, module: str, service: Any) -> None:
         """
         Register a service with a proxy.
@@ -944,7 +913,6 @@ class ChaskiRemote(ChaskiNode):
             obj=service,
         )
 
-    # ----------------------------------------------------------------------
     def proxy(self, module: str, edge=None) -> ChaskiProxy:
         """
         Retrieve a proxy object for the specified service name.
@@ -971,11 +939,9 @@ class ChaskiRemote(ChaskiNode):
         if edge:
             return ChaskiProxy(name=module, node=self, edge=edge, root=None)
         else:
-            logger_remote.warning(
-                f"Module {module} not found in the conected edges"
-            )
+            logger_remote.warning(f"Module {module} not found in the conected edges")
 
-    #     # ----------------------------------------------------------------------
+    #
     #     def geeeet(self, obj, obj_chain):
     #         """"""
     #
@@ -983,7 +949,6 @@ class ChaskiRemote(ChaskiNode):
     #             obj = getattr(obj, obj_)
     #         return obj
 
-    # ----------------------------------------------------------------------
     async def _call_obj_by_proxy(self, **kwargs: dict[str, Any]) -> Any:
         """
         Asynchronously call a method on a proxied object with provided arguments.
@@ -1018,11 +983,11 @@ class ChaskiRemote(ChaskiNode):
         """
         await asyncio.sleep(0)
 
-        name = kwargs['name']
-        obj = kwargs['obj']
-        args = kwargs['args']
-        timestamp = kwargs['timestamp']
-        kwargs_ = kwargs['kwargs']
+        name = kwargs["name"]
+        obj = kwargs["obj"]
+        args = kwargs["args"]
+        timestamp = kwargs["timestamp"]
+        kwargs_ = kwargs["kwargs"]
 
         if args or kwargs_:
             logger_remote.warning(
@@ -1038,36 +1003,35 @@ class ChaskiRemote(ChaskiNode):
                     if "object is not callable" in str(e):
                         attr = self.proxies[name]._object(obj)
                     else:
-                        return 'exception', e
+                        return "exception", e
 
             elif (args is False) and (kwargs_ is False):
                 try:
                     attr = self.proxies[name]._object(obj)
                 except Exception as e:
-                    return 'exception', e
+                    return "exception", e
 
             else:
                 try:
                     attr = self.proxies[name]._object(obj)(*args, **kwargs_)
                 except Exception as e:
-                    return 'exception', e
+                    return "exception", e
 
             self.proxies[name]._reset()
 
             if callable(attr):
-                return 'repr', repr(attr)
+                return "repr", repr(attr)
             else:
                 try:
-                    return 'serialized', self.serializer(attr)
+                    return "serialized", self.serializer(attr)
                 except:
-                    return 'serialized', repr(attr)
+                    return "serialized", repr(attr)
         else:
             return (
-                'exception',
-                'No proxy available for the requested service',
+                "exception",
+                "No proxy available for the requested service",
             )
 
-    # ----------------------------------------------------------------------
     async def _verify_availability(self, module: str, edge=None) -> Any:
         """
         Verify the availability of a specified module across connected nodes.
@@ -1095,7 +1059,7 @@ class ChaskiRemote(ChaskiNode):
         presence or False if no such edge is found.
         """
         data = {
-            'module': module,
+            "module": module,
         }
         # Iterate through each connected edge to check if the specified module is available on any of them.
         for edge_ in self.edges:
@@ -1105,14 +1069,11 @@ class ChaskiRemote(ChaskiNode):
                     return
 
             # Sends a request to verify if the specified module is available on the remote node.
-            available = await self._generic_request_udp(
-                '_verify_module', data, edge_
-            )
+            available = await self._generic_request_udp("_verify_module", data, edge_)
             if available:
                 return edge_
         return False
 
-    # ----------------------------------------------------------------------
     async def _verify_module(self, **kwargs: dict[str, Any]) -> Any:
         """
         Verify the availability of a specified module and register it if available.
@@ -1140,7 +1101,7 @@ class ChaskiRemote(ChaskiNode):
         asynchronous operations.
         """
         await asyncio.sleep(0)
-        module = kwargs['module']
+        module = kwargs["module"]
 
         # Check if the module is listed as available on this node
         if (self.available) and (not module in self.available):

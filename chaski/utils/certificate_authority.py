@@ -1,7 +1,6 @@
 import os
 import ssl
 import datetime
-from platformdirs import user_data_dir
 
 # Importing cryptography modules for X509 certificates, private key generation,
 # and serialization, including RSA key generation and PEM encoding without encryption.
@@ -10,12 +9,12 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
+from chaski.utils import user_data_dir
 
-########################################################################
+
 class CertificateAuthority:
     """"""
 
-    # ----------------------------------------------------------------------
     def __init__(
         self,
         id: str,
@@ -44,7 +43,6 @@ class CertificateAuthority:
         self.ssl_certificate_attributes = ssl_certificate_attributes
         self.ip_address = ip_address
 
-    # ----------------------------------------------------------------------
     def setup_certificate_authority(self) -> None:
         """
         Set up the Certificate Authority (CA).
@@ -151,7 +149,6 @@ class CertificateAuthority:
         with open(self.ca_cert_path_, "wb") as f:
             f.write(ca_certificate.public_bytes(serialization.Encoding.PEM))
 
-    # ----------------------------------------------------------------------
     @property
     def ca_private_key_path(self) -> str:
         """
@@ -177,19 +174,16 @@ class CertificateAuthority:
         else:
             raise Exception("CA key path not set")
 
-    # ----------------------------------------------------------------------
     @ca_private_key_path.setter
     def ca_private_key_path(self, path: str) -> None:
         """"""
         self.ca_key_path_ = path
 
-    # ----------------------------------------------------------------------
     def load_ca(self, ca_key_path, ca_cert_path):
         """"""
         self.ca_private_key_path = ca_key_path
         self.ca_certificate_path = ca_cert_path
 
-    # ----------------------------------------------------------------------
     @property
     def ca_certificate_path(self) -> str:
         """Return the path to the Certificate Authority (CA) certificate.
@@ -213,7 +207,6 @@ class CertificateAuthority:
         else:
             raise Exception("CA certificate path not set")
 
-    # ----------------------------------------------------------------------
     @ca_certificate_path.setter
     def ca_certificate_path(self, path: str) -> None:
         """
@@ -229,7 +222,6 @@ class CertificateAuthority:
         """
         self.ca_cert_path_ = path
 
-    # ----------------------------------------------------------------------
     def sign_csr(self, csr_data: bytes) -> bytes:
         """
         Sign a Certificate Signing Request (CSR) with the Certificate Authority (CA) key.
@@ -312,7 +304,6 @@ class CertificateAuthority:
 
         return certificate.public_bytes(serialization.Encoding.PEM)
 
-    # ----------------------------------------------------------------------
     def _key_and_csr(self, name="client") -> tuple:
         """
         Generate a private key and Certificate Signing Request (CSR).
@@ -395,7 +386,6 @@ class CertificateAuthority:
 
         return private_key_path_, certificate_path_
 
-    # ----------------------------------------------------------------------
     def generate_key_and_csr(self) -> None:
         """
         Generate and store the private keys and Certificate Signing Requests (CSRs).
@@ -417,7 +407,6 @@ class CertificateAuthority:
             self._key_and_csr(name="server")
         )
 
-    # ----------------------------------------------------------------------
     def load_key_and_csr(
         self,
         private_key_client_path: str,
@@ -456,7 +445,6 @@ class CertificateAuthority:
         self.private_key_server_path_ = private_key_server_path
         self.certificate_server_path_ = certificate_server_path
 
-    # ----------------------------------------------------------------------
     @property
     def private_key_paths(self) -> str:
         """
@@ -484,7 +472,6 @@ class CertificateAuthority:
         else:
             raise Exception("Private key path not set")
 
-    # ----------------------------------------------------------------------
     @property
     def certificate_paths(self) -> str:
         """
@@ -512,7 +499,6 @@ class CertificateAuthority:
         else:
             raise Exception("CA certificate path not set")
 
-    # ----------------------------------------------------------------------
     @property
     def certificate_signed_paths(self) -> str:
         """
@@ -537,7 +523,6 @@ class CertificateAuthority:
             "server": self.certificate_paths["server"].replace(".csr", ".cert"),
         }
 
-    # ----------------------------------------------------------------------
     def load_certificate(self, path: str) -> bytes:
         """
         Load a certificate from the specified file path.
@@ -566,7 +551,6 @@ class CertificateAuthority:
         with open(path, "rb") as file:
             return file.read()
 
-    # ----------------------------------------------------------------------
     def write_certificate(self, path: str, certificate: bytes) -> None:
         """
         Write the given certificate to a specified file path.
@@ -590,7 +574,6 @@ class CertificateAuthority:
         with open(path, "wb") as cert_file:
             cert_file.write(certificate)
 
-    # ----------------------------------------------------------------------
     def get_context(self) -> ssl.SSLContext:
         """
         Create and configure an SSL context for secure communication.

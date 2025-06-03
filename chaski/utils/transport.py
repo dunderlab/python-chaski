@@ -10,7 +10,6 @@ from chaski.streamer_sync import ChaskiStreamerSync
 CHASKI_TOPIC = "celery_tasks"
 
 
-########################################################################
 class ChaskiChannel(Channel):
     """
     A custom Kombu channel implementation using ChaskiStreamerSync.
@@ -37,7 +36,6 @@ class ChaskiChannel(Channel):
 
         self.consumer: Optional[ChaskiStreamerSync] = None
 
-    # ----------------------------------------------------------------------
     def _new_queue(self, queue: str, **kwargs: Any) -> None:
         """
         Simulates the creation of a new logical queue.
@@ -51,7 +49,6 @@ class ChaskiChannel(Channel):
         """
         pass
 
-    # ----------------------------------------------------------------------
     def _delete(self, queue: str, **kwargs: Any) -> None:
         """
         Simulates the deletion of a logical queue.
@@ -65,7 +62,6 @@ class ChaskiChannel(Channel):
         """
         pass
 
-    # ----------------------------------------------------------------------
     def _put(self, queue: str, message: dict, **kwargs: Any) -> None:
         """
         Publishes a message to the logical queue.
@@ -81,7 +77,6 @@ class ChaskiChannel(Channel):
         """
         self.producer.push(CHASKI_TOPIC, message)
 
-    # ----------------------------------------------------------------------
     def _get(self, queue: str, timeout: Optional[int] = None) -> dict:
         """
         Retrieves a message from the logical queue.
@@ -122,7 +117,6 @@ class ChaskiChannel(Channel):
         except:
             raise Empty()
 
-    # ----------------------------------------------------------------------
     def close(self) -> None:
         """
         Closes the producer and consumer connections.
@@ -132,7 +126,6 @@ class ChaskiChannel(Channel):
             self.consumer.close()
 
 
-########################################################################
 class ChaskiTransport(Transport):
     """
     A custom Kombu transport implementation using ChaskiStreamerSync.
@@ -147,7 +140,6 @@ class ChaskiTransport(Transport):
 
     Channel = ChaskiChannel
 
-    # ----------------------------------------------------------------------
     def driver_version(self) -> str:
         """
         Retrieves the version of the driver.

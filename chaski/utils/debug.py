@@ -6,7 +6,6 @@ except ImportError:
     pass
 
 
-# ----------------------------------------------------------------------
 def styled_logger(logger):
     """"""
     if not "colorama" in globals():

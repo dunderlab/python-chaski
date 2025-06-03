@@ -16,7 +16,6 @@ from string import ascii_uppercase
 PORT = 65440
 
 
-# ----------------------------------------------------------------------
 async def create_nodes(
     subscriptions: Union[int, List[str]],
     ip: str = "127.0.0.1",
@@ -68,7 +67,6 @@ async def create_nodes(
     return nodes
 
 
-# ----------------------------------------------------------------------
 async def run_transmission(producer, consumer, parent=None):
     """"""
     await asyncio.sleep(0.3)

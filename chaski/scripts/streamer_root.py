@@ -5,7 +5,6 @@ from chaski.streamer import ChaskiStreamer
 logging.basicConfig(level=logging.DEBUG)
 
 
-# ----------------------------------------------------------------------
 async def run(ip, port, name):
     """"""
     root = ChaskiStreamer(
@@ -19,11 +18,10 @@ async def run(ip, port, name):
     await root.run()
 
 
-# ----------------------------------------------------------------------
-def main(ip='127.0.0.1', port=65433, name='ChaskiRoot'):
+def main(ip="127.0.0.1", port=65433, name="ChaskiRoot"):
     """"""
     asyncio.run(run(ip, port, name))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

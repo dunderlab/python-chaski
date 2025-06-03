@@ -27,7 +27,6 @@ from chaski.utils.persistent_storage import PersistentStorage
 from typing import Any
 
 
-########################################################################
 class ChaskiStreamer(ChaskiNode):
     """
     Stream messages with ChaskiStreamer.
@@ -38,7 +37,6 @@ class ChaskiStreamer(ChaskiNode):
     and allows the asynchronous sending of messages to designated topics.
     """
 
-    # ----------------------------------------------------------------------
     def __init__(
         self,
         destination_folder: str = ".",
@@ -96,7 +94,6 @@ class ChaskiStreamer(ChaskiNode):
         if persistent_storage:
             self.persistent_storage = PersistentStorage()
 
-    # ----------------------------------------------------------------------
     def __repr__(self):
         """
         Provide a string representation of the ChaskiStreamer instance.
@@ -108,7 +105,6 @@ class ChaskiStreamer(ChaskiNode):
         h = "*" if self.paired else ""
         return h + self.address
 
-    # ----------------------------------------------------------------------
     @property
     def address(self) -> str:
         """
@@ -124,7 +120,6 @@ class ChaskiStreamer(ChaskiNode):
         """
         return f"ChaskiStreamer@{self.ip}:{self.port}"
 
-    # ----------------------------------------------------------------------
     @classmethod
     def get_hash(cls, file: str, algorithm: str = "sha256") -> str:
         """
@@ -152,7 +147,6 @@ class ChaskiStreamer(ChaskiNode):
                 hash_func.update(chunk)
         return hash_func.hexdigest()
 
-    # ----------------------------------------------------------------------
     def _get_status(self, **kwargs) -> dict:
         """
         Retrieve the status of the node.
@@ -191,7 +185,6 @@ class ChaskiStreamer(ChaskiNode):
             **kwargs,
         }
 
-    # ----------------------------------------------------------------------
     async def __aenter__(self) -> AsyncGenerator:
         """
         Enter the asynchronous context for streaming messages.
@@ -207,7 +200,6 @@ class ChaskiStreamer(ChaskiNode):
         """
         return self.message_stream()
 
-    # ----------------------------------------------------------------------
     async def __aexit__(
         self,
         exception_type: type,
@@ -240,7 +232,6 @@ class ChaskiStreamer(ChaskiNode):
         """
         self.terminate_stream()
 
-    # ----------------------------------------------------------------------
     async def push(self, topic: str, data: bytes = None) -> None:
         """
         Write a message to the specified topic.
@@ -256,7 +247,6 @@ class ChaskiStreamer(ChaskiNode):
         """
         await self._write("ChaskiMessage", data=data, topic=topic)
 
-    # ----------------------------------------------------------------------
     async def _process_ChaskiMessage(self, message: Message, edge: Edge) -> None:
         """
         Process an incoming Chaski message and place it onto the message queue.
@@ -288,7 +278,6 @@ class ChaskiStreamer(ChaskiNode):
             else:
                 await self.message_queue.put(message)
 
-    # ----------------------------------------------------------------------
     def activate_file_transfer(self) -> None:
         """
         Enable the processing of incoming file chunks.
@@ -300,7 +289,6 @@ class ChaskiStreamer(ChaskiNode):
         """
         self.allow_incoming_files = True
 
-    # ----------------------------------------------------------------------
     def deactivate_file_transfer(self) -> None:
         """
         Disable the processing of incoming file chunks.
@@ -310,7 +298,6 @@ class ChaskiStreamer(ChaskiNode):
         """
         self.allow_incoming_files = False
 
-    # ----------------------------------------------------------------------
     async def message_stream(self) -> AsyncGenerator:
         """
         Asynchronously generate messages from the message queue.
@@ -346,7 +333,6 @@ class ChaskiStreamer(ChaskiNode):
             yield message
         self.terminate_stream_flag = True
 
-    # ----------------------------------------------------------------------
     def terminate_stream(self) -> None:
         """
         Terminate the message streaming process.
@@ -357,7 +343,6 @@ class ChaskiStreamer(ChaskiNode):
         """
         self.terminate_stream_flag = True
 
-    # ----------------------------------------------------------------------
     async def push_file(
         self,
         topic: str,
@@ -425,7 +410,6 @@ class ChaskiStreamer(ChaskiNode):
                 await self._write("ChaskiFile", data=package_data, topic=topic)
                 await asyncio.sleep(0)  # very important sleep
 
-    # ----------------------------------------------------------------------
     async def _process_ChaskiFile(self, message: Message, edge: Edge) -> None:
         """
         Process an incoming ChaskiFile message and append each chunk of data to the target file.
@@ -473,7 +457,6 @@ class ChaskiStreamer(ChaskiNode):
                     }
                 )
 
-    # ----------------------------------------------------------------------
     async def _process_ChaskiStorageRequest(self, message: Message, edge: Edge) -> None:
         """
         Process a storage request received via Chaski.
@@ -498,7 +481,6 @@ class ChaskiStreamer(ChaskiNode):
             # Send the storage response via UDP to the specified IP and port
             await self._send_udp_message("storage", data, ip, port)
 
-    # ----------------------------------------------------------------------
     def _process_udp_storage(self, message: Message) -> None:
         """
         Process a storage response received via UDP.
@@ -512,7 +494,6 @@ class ChaskiStreamer(ChaskiNode):
         response = message.data["response"]
         self.store_data(requests, response)
 
-    # ----------------------------------------------------------------------
     def store_data(self, id_: str, value: Any) -> None:
         """
         Store data in the persistent storage.
@@ -526,7 +507,6 @@ class ChaskiStreamer(ChaskiNode):
         """
         self.persistent_storage.set(id_, value)
 
-    # ----------------------------------------------------------------------
     async def fetch_storage(self, id_: str) -> None:
         """
         Request to fetch storage data.

@@ -22,7 +22,6 @@ from chaski.scripts import terminate_connections
 from chaski.node import ChaskiNode
 
 
-########################################################################
 class TestDiscovery(unittest.IsolatedAsyncioTestCase):
     """
     Test case for network discovery functionality of ChaskiNodes.
@@ -36,7 +35,6 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
     def tearDown(self):
         terminate_connections.main()
 
-    # ----------------------------------------------------------------------
     async def _close_nodes(self, nodes: list[ChaskiNode]):
         """
         Close all ChaskiNode instances in the provided list.
@@ -52,7 +50,6 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         for node in nodes:
             await node.stop()
 
-    # ----------------------------------------------------------------------
     def assertConnection(
         self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
     ):
@@ -81,7 +78,6 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
         return self.assertTrue(conn, msg)
 
-    # ----------------------------------------------------------------------
     async def test_no_discovery(self):
         """
         Test that nodes do not discover new peers if discovery process is not invoked.
@@ -116,7 +112,6 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_single_server_connect_discovery(self):
         """
         Test the discovery process when a single server connects to multiple peers.
@@ -175,7 +170,6 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_single_discovery(self):
         """
         Test discovery process with nodes having similar subscriptions.
@@ -233,7 +227,6 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_single_discovery_with_disconnection(self):
         """
         Test the discovery process with disconnections.
@@ -287,7 +280,6 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
 
         await self._close_nodes(nodes)
 
-    # ----------------------------------------------------------------------
     async def test_multiple_discovery(self):
         """
         Test the discovery process with multiple nodes having the same subscription.
