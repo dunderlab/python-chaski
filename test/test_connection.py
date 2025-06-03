@@ -415,19 +415,19 @@ class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCa
         return await super().test_single_connections()
 
     async def test_multiple_connections(self):
-        return await super().test_single_connections()
+        return await super().test_multiple_connections()
 
     async def test_disconnection(self):
-        return await super().test_single_connections()
+        return await super().test_disconnection()
 
     async def test_edges_disconnection(self):
-        return await super().test_single_connections()
+        return await super().test_edges_disconnection()
 
     async def test_edges_client_orphan(self):
-        return await super().test_single_connections()
+        return await super().test_edges_client_orphan()
 
     async def test_edges_server_orphan(self):
-        return await super().test_single_connections()
+        return await super().test_edges_server_orphan()
 
     async def test_response_udp(self):
         return await super().test_response_udp()
@@ -488,19 +488,19 @@ class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnectio
         return await super().test_single_connections()
 
     async def test_multiple_connections(self):
-        return await super().test_single_connections()
+        return await super().test_multiple_connections()
 
     async def test_disconnection(self):
-        return await super().test_single_connections()
+        return await super().test_disconnection()
 
     async def test_edges_disconnection(self):
-        return await super().test_single_connections()
+        return await super().test_edges_disconnection()
 
     async def test_edges_client_orphan(self):
-        return await super().test_single_connections()
+        return await super().test_edges_client_orphan()
 
     async def test_edges_server_orphan(self):
-        return await super().test_single_connections()
+        return await super().test_edges_server_orphan()
 
     async def test_response_udp(self):
         return await super().test_response_udp()
