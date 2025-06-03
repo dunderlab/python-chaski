@@ -126,7 +126,18 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
 
     # ----------------------------------------------------------------------
     async def test_secuential_calls(self):
-        """"""
+        """
+        Test multiple sequential calls to a remote module.
+
+        This test verifies that multiple sequential calls to methods and
+        attributes of a remote module work correctly and consistently.
+
+        Steps:
+        1. Create a server with the 'os' module available.
+        2. Connect a client to the server.
+        3. Make multiple sequential calls to the remote module.
+        4. Verify each call returns the expected results.
+        """
         server = ChaskiRemote(
             port=65434,
             available=["os"],
@@ -154,7 +165,18 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
 
     # ----------------------------------------------------------------------
     async def test_numpy_calls(self):
-        """"""
+        """
+        Test remote access to numpy functionality.
+
+        This test verifies that numpy functions, attributes and methods
+        can be accessed and used correctly through the remote proxy.
+
+        Steps:
+        1. Create a server with the 'numpy' module available.
+        2. Connect a client to the server.
+        3. Proxy the numpy module and make various calls to its functions.
+        4. Verify the return values match expectations.
+        """
         server = ChaskiRemote(
             port=65434,
             available=["numpy"],
