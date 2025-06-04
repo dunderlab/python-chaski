@@ -12,12 +12,12 @@ TestRemote : unittest.IsolatedAsyncioTestCase
     A test case for testing the `ChaskiRemote` class functionality.
 """
 
+import pytest
 import unittest
 import os
 import asyncio
 from chaski.remote import ChaskiRemote
 import numpy as np
-from chaski.scripts import terminate_connections
 
 import logging
 
@@ -33,9 +33,14 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
     ChaskiRemote class behaves as expected.
     """
 
-    def tearDown(self):
-        terminate_connections.main()
+    nodes = []
 
+    async def asyncTearDown(self):
+        for node in self.nodes:
+            print(f"Closing node {node.port}")
+            await node.stop()
+
+    @pytest.mark.asyncio
     async def test_module_no_available_register(self):
         """
         Test absence of module registration.
@@ -81,6 +86,7 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await server.stop()
         await client.stop()
 
+    @pytest.mark.asyncio
     async def test_module_register(self):
         """
         Test the registration and remote access of a specified module.
@@ -121,6 +127,7 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await server.stop()
         await client.stop()
 
+    @pytest.mark.asyncio
     async def test_secuential_calls(self):
         """
         Test multiple sequential calls to a remote module.
@@ -159,6 +166,7 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await server.stop()
         await client.stop()
 
+    @pytest.mark.asyncio
     async def test_numpy_calls(self):
         """
         Test remote access to numpy functionality.

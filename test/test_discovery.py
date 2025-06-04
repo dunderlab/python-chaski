@@ -14,6 +14,7 @@ Classes
       connection establishment.
 """
 
+import pytest
 import unittest
 import asyncio
 from chaski.utils.auto import create_nodes
@@ -30,25 +31,28 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
     connection establishment, and disconnection during the discovery process.
     """
 
+    nodes = []
     ip = "127.0.0.1"
 
-    def tearDown(self):
-        terminate_connections.main()
-
-    async def _close_nodes(self, nodes: list[ChaskiNode]):
-        """
-        Close all ChaskiNode instances in the provided list.
-
-        This method iterates through each ChaskiNode instance in the given list and
-        stops their operation by invoking the `stop` method on each node.
-
-        Parameters
-        ----------
-        nodes : list of ChaskiNode
-            A list containing instances of ChaskiNode that need to be stopped.
-        """
-        for node in nodes:
+    async def asyncTearDown(self):
+        for node in self.nodes:
+            print(f"Closing node {node.port}")
             await node.stop()
+
+    # async def _close_nodes(self, nodes: list[ChaskiNode]):
+    #     """
+    #     Close all ChaskiNode instances in the provided list.
+    #
+    #     This method iterates through each ChaskiNode instance in the given list and
+    #     stops their operation by invoking the `stop` method on each node.
+    #
+    #     Parameters
+    #     ----------
+    #     nodes : list of ChaskiNode
+    #         A list containing instances of ChaskiNode that need to be stopped.
+    #     """
+    #     for node in nodes:
+    #         await node.stop()
 
     def assertConnection(
         self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
@@ -78,6 +82,7 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
         return self.assertTrue(conn, msg)
 
+    @pytest.mark.asyncio
     async def test_no_discovery(self):
         """
         Test that nodes do not discover new peers if discovery process is not invoked.
@@ -100,18 +105,17 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If the nodes do not correctly establish the connection without discovery.
         """
-        nodes = await create_nodes(list("AB"), self.ip, port=65440)
-        await nodes[0].connect(nodes[1])
+        self.nodes = await create_nodes(list("AB"), self.ip, port=65440)
+        await self.nodes[0].connect(self.nodes[1])
 
         await asyncio.sleep(0.3)
-        await nodes[1].discovery()
+        await self.nodes[1].discovery()
 
-        for i, node in enumerate(nodes):
+        for i, node in enumerate(self.nodes):
             self.assertEqual(len(node.edges), 1, f"Node {i} discovery failed")
-        self.assertConnection(*nodes, "The nodes are not connected to each other")
+        self.assertConnection(*self.nodes, "The nodes are not connected to each other")
 
-        await self._close_nodes(nodes)
-
+    @pytest.mark.asyncio
     async def test_single_server_connect_discovery(self):
         """
         Test the discovery process when a single server connects to multiple peers.
@@ -135,41 +139,40 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If any node fails to establish the expected number of connections.
         """
-        nodes = await create_nodes(list("ABB"), self.ip, port=65450)
-        await nodes[0].connect(nodes[1])
-        await nodes[0].connect(nodes[2])
+        self.nodes = await create_nodes(list("ABB"), self.ip, port=65450)
+        await self.nodes[0].connect(self.nodes[1])
+        await self.nodes[0].connect(self.nodes[2])
 
         await asyncio.sleep(0.3)
-        self.assertEqual(len(nodes[0].edges), 2, f"Node 0 discovery failed")
-        self.assertEqual(len(nodes[1].edges), 1, f"Node 1 discovery failed")
-        self.assertEqual(len(nodes[2].edges), 1, f"Node 2 discovery failed")
+        self.assertEqual(len(self.nodes[0].edges), 2, f"Node 0 discovery failed")
+        self.assertEqual(len(self.nodes[1].edges), 1, f"Node 1 discovery failed")
+        self.assertEqual(len(self.nodes[2].edges), 1, f"Node 2 discovery failed")
 
-        nodes[1].paired_event["B"].set()
-        await nodes[2].discovery(on_pair="none", timeout=10)
+        self.nodes[1].paired_event["B"].set()
+        await self.nodes[2].discovery(on_pair="none", timeout=10)
 
         await asyncio.sleep(0.3)
         self.assertEqual(
-            len(nodes[0].edges), 2, f"Node 0 discovery failed after discovery"
+            len(self.nodes[0].edges), 2, f"Node 0 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[1].edges), 2, f"Node 1 discovery failed after discovery"
+            len(self.nodes[1].edges), 2, f"Node 1 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[2].edges), 2, f"Node 2 discovery failed after discovery"
+            len(self.nodes[2].edges), 2, f"Node 2 discovery failed after discovery"
         )
 
         self.assertConnection(
-            nodes[0], nodes[1], "The node 0 is not connected to node 1"
+            self.nodes[0], self.nodes[1], "The node 0 is not connected to node 1"
         )
         self.assertConnection(
-            nodes[0], nodes[2], "The node 0 is not connected to node 2"
+            self.nodes[0], self.nodes[2], "The node 0 is not connected to node 2"
         )
         self.assertConnection(
-            nodes[1], nodes[2], "The node 1 is not connected to node 2"
+            self.nodes[1], self.nodes[2], "The node 1 is not connected to node 2"
         )
 
-        await self._close_nodes(nodes)
-
+    @pytest.mark.asyncio
     async def test_single_discovery(self):
         """
         Test discovery process with nodes having similar subscriptions.
@@ -192,41 +195,40 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If any node fails to establish the expected number of connections.
         """
-        nodes = await create_nodes(list("ABB"), self.ip, port=65460)
-        await nodes[1].connect(nodes[0])
-        await nodes[2].connect(nodes[0])
+        self.nodes = await create_nodes(list("ABB"), self.ip, port=65460)
+        await self.nodes[1].connect(self.nodes[0])
+        await self.nodes[2].connect(self.nodes[0])
 
         await asyncio.sleep(0.3)
-        self.assertEqual(len(nodes[0].edges), 2, f"Node 0 discovery failed")
-        self.assertEqual(len(nodes[1].edges), 1, f"Node 1 discovery failed")
-        self.assertEqual(len(nodes[2].edges), 1, f"Node 2 discovery failed")
+        self.assertEqual(len(self.nodes[0].edges), 2, f"Node 0 discovery failed")
+        self.assertEqual(len(self.nodes[1].edges), 1, f"Node 1 discovery failed")
+        self.assertEqual(len(self.nodes[2].edges), 1, f"Node 2 discovery failed")
 
-        await nodes[1].discovery(on_pair="none", timeout=10)
-        await nodes[2].discovery(on_pair="none", timeout=10)
+        await self.nodes[1].discovery(on_pair="none", timeout=10)
+        await self.nodes[2].discovery(on_pair="none", timeout=10)
 
         await asyncio.sleep(0.3)
         self.assertEqual(
-            len(nodes[0].edges), 2, f"Node 0 discovery failed after discovery"
+            len(self.nodes[0].edges), 2, f"Node 0 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[1].edges), 2, f"Node 1 discovery failed after discovery"
+            len(self.nodes[1].edges), 2, f"Node 1 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[2].edges), 2, f"Node 2 discovery failed after discovery"
+            len(self.nodes[2].edges), 2, f"Node 2 discovery failed after discovery"
         )
 
         self.assertConnection(
-            nodes[0], nodes[1], "The node 0 is not connected to node 1"
+            self.nodes[0], self.nodes[1], "The node 0 is not connected to node 1"
         )
         self.assertConnection(
-            nodes[0], nodes[2], "The node 0 is not connected to node 2"
+            self.nodes[0], self.nodes[2], "The node 0 is not connected to node 2"
         )
         self.assertConnection(
-            nodes[1], nodes[2], "The node 1 is not connected to node 2"
+            self.nodes[1], self.nodes[2], "The node 1 is not connected to node 2"
         )
 
-        await self._close_nodes(nodes)
-
+    @pytest.mark.asyncio
     async def test_single_discovery_with_disconnection(self):
         """
         Test the discovery process with disconnections.
@@ -248,38 +250,37 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If any node fails to establish or maintain the expected connections after discovery and disconnections.
         """
-        nodes = await create_nodes(list("ABB"), self.ip, port=65470)
-        await nodes[1].connect(nodes[0])
-        await nodes[2].connect(nodes[0])
+        self.nodes = await create_nodes(list("ABB"), self.ip, port=65470)
+        await self.nodes[1].connect(self.nodes[0])
+        await self.nodes[2].connect(self.nodes[0])
 
         await asyncio.sleep(0.3)
-        self.assertEqual(len(nodes[0].edges), 2, f"Node 0 connection failed")
-        self.assertEqual(len(nodes[1].edges), 1, f"Node 1 connection failed")
-        self.assertEqual(len(nodes[2].edges), 1, f"Node 2 connection failed")
+        self.assertEqual(len(self.nodes[0].edges), 2, f"Node 0 connection failed")
+        self.assertEqual(len(self.nodes[1].edges), 1, f"Node 1 connection failed")
+        self.assertEqual(len(self.nodes[2].edges), 1, f"Node 2 connection failed")
 
-        nodes[1].paired_event["B"].set()
-        await nodes[2].discovery(on_pair="disconnect", timeout=10)
+        self.nodes[1].paired_event["B"].set()
+        await self.nodes[2].discovery(on_pair="disconnect", timeout=10)
         await asyncio.sleep(0.3)
 
         self.assertEqual(
-            len(nodes[0].edges), 1, f"Node 0 discovery failed after discovery"
+            len(self.nodes[0].edges), 1, f"Node 0 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[1].edges), 2, f"Node 1 discovery failed after discovery"
+            len(self.nodes[1].edges), 2, f"Node 1 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[2].edges), 1, f"Node 2 discovery failed after discovery"
+            len(self.nodes[2].edges), 1, f"Node 2 discovery failed after discovery"
         )
 
         self.assertConnection(
-            nodes[0], nodes[1], "The node 0 is not connected to node 1"
+            self.nodes[0], self.nodes[1], "The node 0 is not connected to node 1"
         )
         self.assertConnection(
-            nodes[2], nodes[1], "The node 0 is not connected to node 2"
+            self.nodes[2], self.nodes[1], "The node 0 is not connected to node 2"
         )
 
-        await self._close_nodes(nodes)
-
+    @pytest.mark.asyncio
     async def test_multiple_discovery(self):
         """
         Test the discovery process with multiple nodes having the same subscription.
@@ -302,88 +303,86 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         AssertionError
             If any node fails to establish the expected number of connections after discovery.
         """
-        nodes = await create_nodes(list("ABBBBBB"), self.ip, port=65480)
-        await nodes[1]._connect_to_peer(nodes[0])
-        await nodes[2]._connect_to_peer(nodes[0])
-        await nodes[3]._connect_to_peer(nodes[0])
-        await nodes[4]._connect_to_peer(nodes[0])
-        await nodes[5]._connect_to_peer(nodes[0])
-        await nodes[6]._connect_to_peer(nodes[0])
+        self.nodes = await create_nodes(list("ABBBBBB"), self.ip, port=65480)
+        await self.nodes[1]._connect_to_peer(self.nodes[0])
+        await self.nodes[2]._connect_to_peer(self.nodes[0])
+        await self.nodes[3]._connect_to_peer(self.nodes[0])
+        await self.nodes[4]._connect_to_peer(self.nodes[0])
+        await self.nodes[5]._connect_to_peer(self.nodes[0])
+        await self.nodes[6]._connect_to_peer(self.nodes[0])
 
         await asyncio.sleep(0.3)
-        self.assertEqual(len(nodes[0].edges), 6, f"Node 0 discovery failed")
-        self.assertEqual(len(nodes[1].edges), 1, f"Node 1 discovery failed")
-        self.assertEqual(len(nodes[2].edges), 1, f"Node 2 discovery failed")
-        self.assertEqual(len(nodes[3].edges), 1, f"Node 3 discovery failed")
-        self.assertEqual(len(nodes[4].edges), 1, f"Node 4 discovery failed")
-        self.assertEqual(len(nodes[5].edges), 1, f"Node 5 discovery failed")
-        self.assertEqual(len(nodes[6].edges), 1, f"Node 6 discovery failed")
+        self.assertEqual(len(self.nodes[0].edges), 6, f"Node 0 discovery failed")
+        self.assertEqual(len(self.nodes[1].edges), 1, f"Node 1 discovery failed")
+        self.assertEqual(len(self.nodes[2].edges), 1, f"Node 2 discovery failed")
+        self.assertEqual(len(self.nodes[3].edges), 1, f"Node 3 discovery failed")
+        self.assertEqual(len(self.nodes[4].edges), 1, f"Node 4 discovery failed")
+        self.assertEqual(len(self.nodes[5].edges), 1, f"Node 5 discovery failed")
+        self.assertEqual(len(self.nodes[6].edges), 1, f"Node 6 discovery failed")
 
-        await nodes[1].discovery(on_pair="none", timeout=10)
-        await nodes[2].discovery(on_pair="none", timeout=10)
-        await nodes[3].discovery(on_pair="none", timeout=10)
-        await nodes[4].discovery(on_pair="none", timeout=10)
-        await nodes[5].discovery(on_pair="none", timeout=10)
-        await nodes[6].discovery(on_pair="none", timeout=10)
+        await self.nodes[1].discovery(on_pair="none", timeout=10)
+        await self.nodes[2].discovery(on_pair="none", timeout=10)
+        await self.nodes[3].discovery(on_pair="none", timeout=10)
+        await self.nodes[4].discovery(on_pair="none", timeout=10)
+        await self.nodes[5].discovery(on_pair="none", timeout=10)
+        await self.nodes[6].discovery(on_pair="none", timeout=10)
 
         await asyncio.sleep(0.3)
         self.assertEqual(
-            len(nodes[0].edges), 6, f"Node 0 discovery failed after discovery"
+            len(self.nodes[0].edges), 6, f"Node 0 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[1].edges), 6, f"Node 1 discovery failed after discovery"
+            len(self.nodes[1].edges), 6, f"Node 1 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[2].edges), 2, f"Node 2 discovery failed after discovery"
+            len(self.nodes[2].edges), 2, f"Node 2 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[3].edges), 2, f"Node 3 discovery failed after discovery"
+            len(self.nodes[3].edges), 2, f"Node 3 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[4].edges), 2, f"Node 4 discovery failed after discovery"
+            len(self.nodes[4].edges), 2, f"Node 4 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[5].edges), 2, f"Node 5 discovery failed after discovery"
+            len(self.nodes[5].edges), 2, f"Node 5 discovery failed after discovery"
         )
         self.assertEqual(
-            len(nodes[6].edges), 2, f"Node 6 discovery failed after discovery"
+            len(self.nodes[6].edges), 2, f"Node 6 discovery failed after discovery"
         )
 
         self.assertConnection(
-            nodes[0], nodes[1], "The node 0 is not connected to node 1"
+            self.nodes[0], self.nodes[1], "The node 0 is not connected to node 1"
         )
         self.assertConnection(
-            nodes[0], nodes[2], "The node 0 is not connected to node 2"
+            self.nodes[0], self.nodes[2], "The node 0 is not connected to node 2"
         )
         self.assertConnection(
-            nodes[0], nodes[3], "The node 1 is not connected to node 3"
+            self.nodes[0], self.nodes[3], "The node 1 is not connected to node 3"
         )
         self.assertConnection(
-            nodes[0], nodes[4], "The node 0 is not connected to node 4"
+            self.nodes[0], self.nodes[4], "The node 0 is not connected to node 4"
         )
         self.assertConnection(
-            nodes[0], nodes[5], "The node 0 is not connected to node 5"
+            self.nodes[0], self.nodes[5], "The node 0 is not connected to node 5"
         )
         self.assertConnection(
-            nodes[0], nodes[6], "The node 0 is not connected to node 6"
+            self.nodes[0], self.nodes[6], "The node 0 is not connected to node 6"
         )
         self.assertConnection(
-            nodes[1], nodes[2], "The node 0 is not connected to node 2"
+            self.nodes[1], self.nodes[2], "The node 0 is not connected to node 2"
         )
         self.assertConnection(
-            nodes[1], nodes[3], "The node 1 is not connected to node 3"
+            self.nodes[1], self.nodes[3], "The node 1 is not connected to node 3"
         )
         self.assertConnection(
-            nodes[1], nodes[4], "The node 1 is not connected to node 4"
+            self.nodes[1], self.nodes[4], "The node 1 is not connected to node 4"
         )
         self.assertConnection(
-            nodes[1], nodes[5], "The node 1 is not connected to node 5"
+            self.nodes[1], self.nodes[5], "The node 1 is not connected to node 5"
         )
         self.assertConnection(
-            nodes[1], nodes[2], "The node 1 is not connected to node 6"
+            self.nodes[1], self.nodes[2], "The node 1 is not connected to node 6"
         )
-
-        await self._close_nodes(nodes)
 
 
 if __name__ == "__main__":

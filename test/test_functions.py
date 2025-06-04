@@ -15,6 +15,7 @@ TestFunctions : unittest.IsolatedAsyncioTestCase
     address verification, and message handling.
 """
 
+import pytest
 import os
 import ssl
 import asyncio
@@ -28,27 +29,15 @@ from chaski.scripts import terminate_connections
 class TestFunctions(unittest.IsolatedAsyncioTestCase):
     """"""
 
+    nodes = []
     ip = "127.0.0.1"
 
-    def tearDown(self):
-        terminate_connections.main()
-
-    async def _close_nodes(self, nodes: list[ChaskiNode]) -> None:
-        """
-        Close all ChaskiNode instances in the provided list.
-
-        This method iterates through each ChaskiNode instance in the given list and
-        stops their operation by invoking the `stop` method on each node.
-
-        Parameters
-        ----------
-        nodes : list of ChaskiNode
-            A list containing instances of ChaskiNode that need to be stopped.
-        """
-        for node in nodes:
-            await asyncio.sleep(0.3)
+    async def asyncTearDown(self):
+        for node in self.nodes:
+            print(f"Closing node {node.port}")
             await node.stop()
 
+    @pytest.mark.asyncio
     async def test_ping(self) -> None:
         """
         Test the ping functionality between ChaskiNode instances.
@@ -72,33 +61,32 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         -----
         This test ensures that the ping functionality between nodes works correctly and that latency is calculated and reset properly.
         """
-        nodes = await create_nodes(3, self.ip, port=65440)
-        await nodes[1].connect(nodes[0])
-        await nodes[2].connect(nodes[0])
+        self.nodes = await create_nodes(3, self.ip, port=65440)
+        await self.nodes[1].connect(self.nodes[0])
+        await self.nodes[2].connect(self.nodes[0])
         await asyncio.sleep(0.3)
 
-        await nodes[0].ping(nodes[0].edges[0])
+        await self.nodes[0].ping(self.nodes[0].edges[0])
         await asyncio.sleep(1)
-        await nodes[0].ping(nodes[0].edges[1], size=100000)
+        await self.nodes[0].ping(self.nodes[0].edges[1], size=100000)
         await asyncio.sleep(1)
 
         self.assertGreater(
-            nodes[0].edges[1].latency,
-            nodes[0].edges[0].latency,
+            self.nodes[0].edges[1].latency,
+            self.nodes[0].edges[0].latency,
             "Latency of the second edge should be greater than the latency of the first edge",
         )
 
-        nodes[0].edges[0].reset_latency()
-        nodes[0].edges[1].reset_latency()
+        self.nodes[0].edges[0].reset_latency()
+        self.nodes[0].edges[1].reset_latency()
 
         self.assertEqual(
-            nodes[0].edges[1].latency,
-            nodes[0].edges[0].latency,
+            self.nodes[0].edges[1].latency,
+            self.nodes[0].edges[0].latency,
             "Latencies of the two edges should be equal after resetting",
         )
 
-        await self._close_nodes(nodes)
-
+    @pytest.mark.asyncio
     async def test_address(self) -> None:
         """
         Test the correctness of node addresses.
@@ -120,24 +108,25 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         -----
         This test ensures that the nodes' addresses are correctly set and can be retrieved accurately.
         """
-        nodes = await create_nodes(2, self.ip, port=65450)
-        await nodes[1].connect(nodes[0])
+        self.nodes = await create_nodes(2, self.ip, port=65450)
+        await self.nodes[1].connect(self.nodes[0])
         await asyncio.sleep(0.3)
 
         self.assertEqual(
-            nodes[0].edges[0].address[0],
+            self.nodes[0].edges[0].address[0],
             self.ip,
             "The address of the edge should match the provided IP",
         )
 
         self.assertEqual(
-            nodes[0].edges[0].local_address[1],
+            self.nodes[0].edges[0].local_address[1],
             65450,
             "Local address of the edge should be 65450",
         )
 
-        await self._close_nodes(nodes)
+        await self._close_nodes(self.nodes)
 
+    @pytest.mark.asyncio
     async def test_message_ttl(self) -> None:
         """
         Test the time-to-live (TTL) functionality of messages.
@@ -168,6 +157,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
             "The TTL should be decremented by 2 from the initial value of 10",
         )
 
+    @pytest.mark.asyncio
     async def test_ssl_certificate(self) -> None:
         """
         Test the SSL certificate configuration for secure communication.
@@ -267,6 +257,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
+    @pytest.mark.asyncio
     async def test_ssl_certificate_CA(self) -> None:
         """
         Test requesting SSL certificates from the Certificate Authority (CA).
@@ -317,6 +308,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
+    @pytest.mark.asyncio
     async def test_ssl_certificate_CA_inline(self) -> None:
         """
         Test the inline requesting of SSL certificates from the Certificate Authority (CA).
@@ -366,6 +358,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
+    @pytest.mark.asyncio
     async def test_ssl_certificate_CA_off(self) -> None:
         """
         Test the behavior of requesting SSL certificates from a non-existent CA.

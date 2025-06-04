@@ -23,6 +23,8 @@ Test_Connections_for_IPv6:
     specifically.
 """
 
+
+import pytest
 import unittest
 import asyncio
 from chaski.utils.auto import create_nodes
@@ -41,24 +43,26 @@ class _TestConnections:
     communication protocols, such as IPv4 and IPv6.
     """
 
-    def tearDown(self):
-        terminate_connections.main()
-
-    async def _close_nodes(self, nodes: list[ChaskiNode]):
-        """
-        Close all ChaskiNode instances in the provided list.
-
-        This method iterates through each ChaskiNode instance in the given list and
-        stops their operation by invoking the `stop` method on each node.
-
-        Parameters
-        ----------
-        nodes : list of ChaskiNode
-            A list containing instances of ChaskiNode that need to be stopped.
-        """
-        for node in nodes:
-            await asyncio.sleep(0.3)
+    async def asyncTearDown(self):
+        for node in self.nodes:
+            print(f"Closing node {node.port}")
             await node.stop()
+    #
+    # async def _close_nodes(self, nodes: list[ChaskiNode]):
+    #     """
+    #     Close all ChaskiNode instances in the provided list.
+    #
+    #     This method iterates through each ChaskiNode instance in the given list and
+    #     stops their operation by invoking the `stop` method on each node.
+    #
+    #     Parameters
+    #     ----------
+    #     nodes : list of ChaskiNode
+    #         A list containing instances of ChaskiNode that need to be stopped.
+    #     """
+    #     for node in nodes:
+    #         await asyncio.sleep(0.3)
+    #         await node.stop()
 
     def assertConnection(
         self, node1: "ChaskiNode", node2: ChaskiNode, msg: Optional[str] = None
@@ -88,6 +92,7 @@ class _TestConnections:
         conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
         return self.assertTrue(conn, msg)
 
+    @pytest.mark.asyncio
     async def test_single_connections(self):
         """
         Test single connections between ChaskiNodes.
@@ -117,6 +122,7 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
+    @pytest.mark.asyncio
     async def test_multiple_connections(self):
         """
         Test multiple connections to a single ChaskiNode.
@@ -152,6 +158,7 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
+    @pytest.mark.asyncio
     async def test_disconnection(self):
         """
         Test disconnection of nodes.
@@ -187,6 +194,7 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
+    @pytest.mark.asyncio
     async def test_edges_disconnection(self):
         """
         Test progressive disconnection of nodes from edge nodes.
@@ -233,6 +241,7 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
+    @pytest.mark.asyncio
     async def test_edges_client_orphan(self):
         """
         Test when client-edge nodes become orphaned.
@@ -278,6 +287,7 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
+    @pytest.mark.asyncio
     async def test_edges_server_orphan(self):
         """
         Test when server-edge nodes become orphaned.
@@ -324,6 +334,7 @@ class _TestConnections:
 
         await self._close_nodes(nodes)
 
+    @pytest.mark.asyncio
     async def test_response_udp(self):
         """
         Test the UDP response mechanism of ChaskiNodes.
