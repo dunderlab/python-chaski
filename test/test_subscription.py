@@ -17,11 +17,11 @@ Functions
 - test_single_subscription_with_disconnect() : Test single subscription connections between ChaskiNodes with node disconnection during pairing.
 """
 
+import pytest
 import unittest
 import asyncio
 from typing import Optional
 from chaski.utils.auto import create_nodes
-from chaski.scripts import terminate_connections
 from chaski.node import ChaskiNode
 
 
@@ -33,13 +33,12 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
     and validate the correct establishment of connections based on their subscription topics.
     """
 
-    def setUp(self):
-        self.nodes = []
-        self.host = "127.0.0.1"
+    nodes = []
+    host = "127.0.0.1"
 
-    async def tearDown(self):
-        terminate_connections.main([node.port for node in self.nodes])
+    async def asyncTearDown(self):
         for node in self.nodes:
+            print(f"Closing node {node.port}")
             await node.stop()
 
     def assertConnection(
@@ -98,6 +97,7 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
         conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
         return self.assertFalse(conn, msg)
 
+    @pytest.mark.asyncio
     async def test_single_subscription_no_disconnect(self):
         """
         Test single subscription connections between ChaskiNodes without disconnecting other nodes.
@@ -142,6 +142,7 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
             "Node 2 should be connected to Node 5 because both nodes are subscribed to the topic 'C'.",
         )
 
+    @pytest.mark.asyncio
     async def test_single_subscription_with_disconnect(self):
         """"""
         self.nodes = await create_nodes(
