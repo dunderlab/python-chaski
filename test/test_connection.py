@@ -23,7 +23,6 @@ Test_Connections_for_IPv6:
     specifically.
 """
 
-
 import pytest
 import unittest
 import asyncio
@@ -47,6 +46,7 @@ class _TestConnections:
         for node in self.nodes:
             print(f"Closing node {node.port}")
             await node.stop()
+
     #
     # async def _close_nodes(self, nodes: list[ChaskiNode]):
     #     """
