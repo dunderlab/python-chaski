@@ -13,7 +13,8 @@ from typing import List, Union
 import asyncio
 from string import ascii_uppercase
 
-PORT = 65440
+# PORT = 65440
+PORT = 0
 
 
 async def create_nodes(
