@@ -18,7 +18,6 @@ def close_connections(port):
         if pids:
             # Close all active connections
             for pid in pids:
-                print(f"Closing connection with PID {pid}...")
                 os.kill(int(pid), 9)
 
     except Exception as e:
@@ -27,21 +26,23 @@ def close_connections(port):
         )
 
 
-def main():
+def main(nodes=None):
 
-    try:
-        port_range = sys.argv[1]
-        START_PORT, END_PORT = map(int, port_range.split("-"))
-        if START_PORT > END_PORT:
-            raise ValueError(
-                "The start port must be less than or equal to the end port."
-            )
-    except ValueError as e:
-        START_PORT = 65440
-        END_PORT = 65500
+    if nodes is None:
+        try:
+            port_range = sys.argv[1]
+            START_PORT, END_PORT = map(int, port_range.split("-"))
+            if START_PORT > END_PORT:
+                raise ValueError(
+                    "The start port must be less than or equal to the end port."
+                )
+            nodes = range(START_PORT, END_PORT + 1)
+
+        except:
+            nodes = range(65440, 65500 + 1)
 
     # Iterate over the range of ports and close active connections
-    for port in range(START_PORT, END_PORT + 1):
+    for port in nodes:
         close_connections(port)
 
 
