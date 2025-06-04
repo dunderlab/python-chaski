@@ -28,8 +28,6 @@ def close_connections(port):
 
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit(1)
 
     try:
         port_range = sys.argv[1]
