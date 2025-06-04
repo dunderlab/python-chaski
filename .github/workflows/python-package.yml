@@ -53,9 +53,9 @@ jobs:
 #    - name: Test remote
 #      run: |
 #        pytest test/test_remote.py -v
-#    - name: Test streamer
-#      run: |
-#        pytest test/test_streamer.py -v
-    - name: Test subscription
+    - name: Test streamer
       run: |
-        pytest test/test_subscription.py -v
+        pytest test/test_streamer.py -v
+#    - name: Test subscription
+#      run: |
+#        pytest test/test_subscription.py -v

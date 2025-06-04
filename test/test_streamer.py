@@ -9,6 +9,7 @@ streaming of messages between producers and consumers within a distributed syste
 
 """
 
+import pytest
 import unittest
 import asyncio
 import os
@@ -26,10 +27,14 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
     to ensure that messages are correctly streamed and received.
     """
 
-    #
-    def tearDown(self):
-        terminate_connections.main()
+    nodes = []
 
+    async def asyncTearDown(self):
+        for node in self.nodes:
+            print(f"Closing node {node.port}")
+            await node.stop()
+
+    @pytest.mark.asyncio
     async def test_stream(self) -> None:
         """
         Test the streaming functionality between a producer and a consumer.
@@ -62,6 +67,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
+    @pytest.mark.asyncio
     async def test_file_transfer(self) -> None:
         """
         Test the file transfer functionality between a producer and a consumer.
@@ -153,6 +159,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         await consumer.stop()
         await producer.stop()
 
+    @pytest.mark.asyncio
     async def test_file_dissable_transfer(self) -> None:
         """
         Test the file transfer functionality when the consumer has file transfer disabled.
@@ -213,6 +220,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         await consumer.stop()
         await producer.stop()
 
+    @pytest.mark.asyncio
     async def test_stream_chain(self) -> None:
         """
         Test chaining of multiple ChaskiStreamer instances end-to-end.
@@ -312,6 +320,7 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         await chain4.stop()
         await chain5.stop()
 
+    @pytest.mark.asyncio
     async def test_root_node(self) -> None:
         """
         Test chaining of multiple ChaskiStreamer instances end-to-end.
