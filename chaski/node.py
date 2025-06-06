@@ -356,6 +356,7 @@ class UDPProtocol(asyncio.DatagramProtocol):
 
     node: "ChaskiNode"
     on_message_received: Awaitable
+    _background_tasks = set()
 
     def datagram_received(self, message: bytes, addr: tuple[str, int]) -> None:
         """
@@ -404,6 +405,12 @@ class UDPProtocol(asyncio.DatagramProtocol):
             The exception object if the connection was lost due to an error, or None if the connection was closed cleanly.
         """
         logger_udp.info(f"UDP connection closed: {exc}")
+
+    def track_task(self, coro):
+        task = asyncio.create_task(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
 
 class ChaskiNode:

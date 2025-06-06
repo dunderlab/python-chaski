@@ -308,12 +308,12 @@ class TestDiscovery(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.nodes[5].edges), 1, f"Node 5 failed before discovery")
         self.assertEqual(len(self.nodes[6].edges), 1, f"Node 6 failed before discovery")
 
-        await self.nodes[1].discovery(on_pair="none", timeout=1)
-        await self.nodes[2].discovery(on_pair="none", timeout=1)
-        await self.nodes[3].discovery(on_pair="none", timeout=1)
-        await self.nodes[4].discovery(on_pair="none", timeout=1)
-        await self.nodes[5].discovery(on_pair="none", timeout=1)
-        await self.nodes[6].discovery(on_pair="none", timeout=1)
+        await self.nodes[1].discovery(on_pair="none")
+        await self.nodes[2].discovery(on_pair="none")
+        await self.nodes[3].discovery(on_pair="none")
+        await self.nodes[4].discovery(on_pair="none")
+        await self.nodes[5].discovery(on_pair="none")
+        await self.nodes[6].discovery(on_pair="none")
 
         await self._wait_for_connections()
 
