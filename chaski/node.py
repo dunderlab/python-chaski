@@ -938,12 +938,13 @@ class ChaskiNode:
             ]:
                 await asyncio.sleep(discovery_timeout)
                 await self.discovery(on_pair="disconnect", timeout=discovery_timeout)
+        return None
 
     async def discovery(
         self,
         node: Optional["ChaskiNode"] = None,
         on_pair: Union[str, Literal["none", "disconnect"]] = "none",
-        timeout: int = 10,
+        timeout: Union[int, float] = 10,
     ) -> None:
         """
         Conducts a network-wide discovery process.

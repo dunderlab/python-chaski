@@ -41,17 +41,6 @@ class _TestConnections:
     communication protocols, such as IPv4 and IPv6.
     """
 
-    nodes = []
-
-    async def _wait_for_connections(self):
-        for i in range(10):
-            await asyncio.sleep(0.3)
-
-    async def asyncTearDown(self):
-        for node in self.nodes:
-            await node.stop()
-        await self._wait_for_connections()
-
     def assertConnection(
         self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
     ):
@@ -206,34 +195,32 @@ class _TestConnections:
         self.nodes = await create_nodes(6, self.ip)
 
         for node in self.nodes:
-            print(node.port)
-
-        for node in self.nodes:
-            if node != self.nodes[0]:
+            if node.port != self.nodes[0].port:
                 await node.connect(self.nodes[0])
 
         await self._wait_for_connections()
 
         for node in self.nodes:
-            if node != self.nodes[5]:
+            if node.port != self.nodes[5].port:
                 await node.connect(self.nodes[5])
 
-        # await self._wait_for_connections()
+        await self._wait_for_connections()
 
-        # for i in range(4):
-        #     await self.nodes[0].close_connection(self.nodes[0].edges[0])
-        #     await self._wait_for_connections()
-        #     self.assertEqual(
-        #         len(self.nodes[0].edges), max(3 - i, 1), "Node 0 connections failed"
-        #     )
-        #
-        # await self._wait_for_connections()
-        #
-        # for i in range(1, 4):
-        #     self.assertEqual(
-        #         len(self.nodes[i].edges), 1, f"Node {i} connections failed"
-        #     )
-        # self.assertEqual(len(self.nodes[4].edges), 2, "Node 4 connections failed")
+        edges = self.nodes[0].edges.copy()
+        for i, edge in enumerate(edges):
+            await self.nodes[0].close_connection(edge)
+            await self._wait_for_connections()
+            self.assertEqual(
+                len(self.nodes[0].edges), 4 - i, "Node 0 connections failed"
+            )
+
+        await self._wait_for_connections()
+
+        for i in range(1, 5):
+            self.assertEqual(
+                len(self.nodes[i].edges), 1, f"Node {i} connections failed"
+            )
+        self.assertEqual(len(self.nodes[5].edges), 4, "Node 6 connections failed")
 
     @pytest.mark.asyncio
     async def test_edges_client_orphan(self):
@@ -397,19 +384,17 @@ class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCa
         Evaluates the handling of server-edge nodes becoming orphaned over IPv4.
     """
 
-    async def asyncSetUp(self) -> None:
-        """
-        Initialize the test environment for IPv4 connections.
+    ip = "127.0.0.1"
+    nodes = []
 
-        This method sets up the testing environment before the execution of each asynchronous test.
-        It initializes the ip address to the local IPv4 address '127.0.0.1'.
+    async def _wait_for_connections(self):
+        for i in range(10):
+            await asyncio.sleep(0.3)
 
-        Notes
-        -----
-        This method is automatically invoked by the testing framework and typically does not need to be called explicitly.
-        """
-        self.ip = "127.0.0.1"
-        await asyncio.sleep(0)
+    async def asyncTearDown(self):
+        for node in self.nodes:
+            await node.stop()
+        await self._wait_for_connections()
 
     @pytest.mark.asyncio
     async def test_single_connections(self):
@@ -477,19 +462,17 @@ class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnectio
         Evaluates the handling of server-edge nodes becoming orphaned over IPv6.
     """
 
-    async def asyncSetUp(self) -> None:
-        """
-        Initialize the test environment for IPv6 connections.
+    ip = "::1"
+    nodes = []
 
-        This method sets up the testing environment before the execution of each asynchronous test.
-        It initializes the ip address to the local IPv6 address '::1'.
+    async def _wait_for_connections(self):
+        for i in range(10):
+            await asyncio.sleep(0.3)
 
-        Notes
-        -----
-        This method is automatically invoked by the testing framework and typically does not need to be called explicitly.
-        """
-        self.ip = "::1"
-        await asyncio.sleep(0)
+    async def asyncTearDown(self):
+        for node in self.nodes:
+            await node.stop()
+        await self._wait_for_connections()
 
     @pytest.mark.asyncio
     async def test_single_connections(self):

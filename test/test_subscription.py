@@ -149,7 +149,7 @@ class TestSubscriptions(unittest.IsolatedAsyncioTestCase):
             ["A", "B", "C", ["A", "C"], ["B", "A"], "C"], port=65450
         )
         for node in self.nodes[1:]:
-            await node._connect_to_peer(self.nodes[0])
+            await node.connect(self.nodes[0])
 
         await asyncio.sleep(0.3)
         for node in self.nodes[1:]:
