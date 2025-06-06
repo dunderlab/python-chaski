@@ -17,6 +17,11 @@ from string import ascii_uppercase
 PORT = 0
 
 
+async def _wait_for_connections():
+    for i in range(10):
+        await asyncio.sleep(0.3)
+
+
 async def create_nodes(
     subscriptions: Union[int, List[str]],
     ip: str = "127.0.0.1",
@@ -48,10 +53,15 @@ async def create_nodes(
     if isinstance(subscriptions, int):
         subscriptions = list(ascii_uppercase)[:subscriptions]
 
+    if PORT == 0:
+        mult = 0
+    else:
+        mult = 1
+
     nodes = [
         ChaskiNode(
             ip=ip,
-            port=port + i,
+            port=mult * (port + i),
             name=f"Node{i}",
             subscriptions=sub,
             run=True,
@@ -62,19 +72,18 @@ async def create_nodes(
         )
         for i, sub in enumerate(subscriptions)
     ]
-    port += len(subscriptions) + 1
 
-    await asyncio.sleep(0.5)
+    await _wait_for_connections()
     return nodes
 
 
 async def run_transmission(producer, consumer, parent=None):
     """"""
-    await asyncio.sleep(0.3)
+    await _wait_for_connections()
     # await producer.connect(consumer.address)
     await consumer.connect(producer.address)
 
-    await asyncio.sleep(0.3)
+    await _wait_for_connections()
     await producer.push(
         "topic1",
         {

@@ -41,6 +41,7 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["chaski"]
+
 [project.optional-dependencies]
 dev = [
     "colorama",
@@ -61,6 +62,8 @@ testing = [
     "nest-asyncio",
 ]
 
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "module"
 
 [project.scripts]
 chaski_certificate_authority = "chaski.scripts.certificate_authority:main"
