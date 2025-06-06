@@ -550,6 +550,8 @@ class ChaskiNode:
         self.lock_disconnect = asyncio.Lock()
         self.lock_propagate = asyncio.Lock()
 
+        self._background_tasks = set()
+
         # Initialize the node's connection and event tracking structures
         self.edges = []
         self.ping_events = {}
@@ -587,14 +589,14 @@ class ChaskiNode:
 
         # If the run flag is set to True, create and start the main event loop task for the node
         if run:
-            asyncio.create_task(self.run())
+            self.track_task(self.run())
 
         # Request an SSL certificate for secure communication if specified
         if request_ssl_certificate:
             loop = asyncio.get_event_loop()
             loop.call_later(
                 1,
-                lambda: asyncio.create_task(
+                lambda: self.track_task(
                     self.request_ssl_certificate(request_ssl_certificate)
                 ),
             )
@@ -746,6 +748,10 @@ class ChaskiNode:
             except asyncio.TimeoutError:
                 logger_main.warning("Timeout waiting for server to close.")
 
+        for task in self._background_tasks:
+            task.cancel()
+        await asyncio.gather(*self._background_tasks, return_exceptions=True)
+
     async def _connect_to_peer(
         self,
         node: "ChaskiNode",
@@ -819,7 +825,8 @@ class ChaskiNode:
 
         # Log new connection
         logger_main.debug(f"{self.name}: New connection with {edge.address}.")
-        asyncio.create_task(self._reader_loop(edge))
+        self.track_task(self._reader_loop(edge))
+
         await self.handshake(edge, response=True)
         return edge
 
@@ -1158,7 +1165,7 @@ class ChaskiNode:
             f"{self.name}: Accepted connection from {writer.get_extra_info('peername')}."
         )
         logger_main.debug(f"{self.name}: New connection with {edge.address}.")
-        asyncio.create_task(self._reader_loop(edge))
+        self.track_task(self._reader_loop(edge))
 
         # # If there are no edges (connections) yet, designate this node as the root node
         # if not self.edges:
@@ -1380,7 +1387,7 @@ class ChaskiNode:
         # Logging the server address and starting keep-alive task
         addr = self.server.sockets[0].getsockname()
         logger_main.debug(f"{self.name}: Serving at address {addr}.")
-        self._keep_alive_task = asyncio.create_task(self._keep_alive())
+        self._keep_alive_task = self.track_task(self._keep_alive())
 
         # Start serving TCP connections forever
         async with self.server:
@@ -2592,7 +2599,13 @@ class ChaskiNode:
 
         # Restart the node by stopping the current event loop and then creating a new event loop task to run the node.
         await self.stop()
-        asyncio.create_task(self.run())
+        self.track_task(self.run())
 
         if not (self.ssl_context_client and self.ssl_context_server):
             raise Exception("Failed to create SSL contexts")
+
+    def track_task(self, coro):
+        task = asyncio.create_task(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
