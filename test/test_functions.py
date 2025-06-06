@@ -61,7 +61,7 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         -----
         This test ensures that the ping functionality between nodes works correctly and that latency is calculated and reset properly.
         """
-        self.nodes = await create_nodes(3, self.ip, port=65440)
+        self.nodes = await create_nodes(3, self.ip)
         await self.nodes[1].connect(self.nodes[0])
         await self.nodes[2].connect(self.nodes[0])
         await asyncio.sleep(0.3)
@@ -108,7 +108,10 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         -----
         This test ensures that the nodes' addresses are correctly set and can be retrieved accurately.
         """
-        self.nodes = await create_nodes(2, self.ip, port=65450)
+
+        port = 65499
+
+        self.nodes = await create_nodes(2, self.ip, port=port)
         await self.nodes[1].connect(self.nodes[0])
         await asyncio.sleep(0.3)
 
@@ -120,11 +123,9 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             self.nodes[0].edges[0].local_address[1],
-            65450,
-            "Local address of the edge should be 65450",
+            port,
+            f"Local address of the edge should be {port}",
         )
-
-        await self._close_nodes(self.nodes)
 
     @pytest.mark.asyncio
     async def test_message_ttl(self) -> None:
@@ -258,57 +259,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         await run_transmission(producer, consumer, parent=self)
 
     @pytest.mark.asyncio
-    async def test_ssl_certificate_CA(self) -> None:
-        """
-        Test requesting SSL certificates from the Certificate Authority (CA).
-
-        This test method validates the process of requesting and obtaining
-        SSL/TLS certificates from a Certificate Authority for both producer
-        and consumer nodes. The steps include:
-
-        1. Initialize a ChaskiStreamer instance for the producer with the CA's address.
-        2. Initialize a ChaskiStreamer instance for the consumer with the CA's address.
-        3. Request SSL certificates for both producer and consumer from the CA.
-        4. Run a secure transmission between producer and consumer to validate the
-           successful acquisition and usage of the SSL certificates.
-
-        Assertions
-        ----------
-        AssertionError
-            If there are issues in obtaining or using the SSL certificates.
-
-        Notes
-        -----
-        This test ensures the proper interaction with the CA to secure
-        communication channels.
-        """
-
-        producer = ChaskiStreamer(
-            # port=65433,
-            name="Producer",
-            subscriptions=["topic1"],
-            reconnections=None,
-            ssl_certificates_location="tmp_certs_ca",
-        )
-
-        consumer = ChaskiStreamer(
-            # port=65434,
-            name="Consumer",
-            subscriptions=["topic1"],
-            reconnections=None,
-            ssl_certificates_location="tmp_certs_ca",
-        )
-
-        await producer.request_ssl_certificate(
-            os.getenv("CHASKI_CERTIFICATE_AUTHORITY", "ChaskiCA@127.0.0.1:65432")
-        )
-        await consumer.request_ssl_certificate(
-            os.getenv("CHASKI_CERTIFICATE_AUTHORITY", "ChaskiCA@127.0.0.1:65432")
-        )
-
-        await run_transmission(producer, consumer, parent=self)
-
-    @pytest.mark.asyncio
     async def test_ssl_certificate_CA_inline(self) -> None:
         """
         Test the inline requesting of SSL certificates from the Certificate Authority (CA).
@@ -386,7 +336,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         """
         try:
             ChaskiStreamer(
-                port=65433,
                 name="Producer",
                 subscriptions=["topic1"],
                 reconnections=None,

@@ -26,6 +26,7 @@ Methods:
 """
 
 import os
+import pytest
 import unittest
 import ipaddress
 
@@ -36,6 +37,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 
 from chaski.utils.certificate_authority import CertificateAuthority
+from chaski.utils.auto import run_transmission
+from chaski.streamer import ChaskiStreamer
 
 
 class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
@@ -92,6 +95,7 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         )
         return ca
 
+    @pytest.mark.asyncio
     def test_ca(self) -> None:
         """Test the creation of CA certificate and private key.
 
@@ -143,6 +147,7 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
                 f"The private key does not correspond to the certificate: {str(e)}",
             )
 
+    @pytest.mark.asyncio
     def test_csr(self) -> None:
         """Test the generation of private keys and CSRs.
 
@@ -215,6 +220,7 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
             "Server key modulus does not match Server CSR modulus",
         )
 
+    @pytest.mark.asyncio
     def test_sign(self) -> None:
         """Test signing of client and server CSRs by the CA.
 
@@ -299,3 +305,54 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
                 False,
                 f"The server certificate was NOT signed by the CA: {str(e)}",
             )
+
+    @pytest.mark.asyncio
+    async def test_ssl_certificate_CA(self) -> None:
+        """
+        Test requesting SSL certificates from the Certificate Authority (CA).
+
+        This test method validates the process of requesting and obtaining
+        SSL/TLS certificates from a Certificate Authority for both producer
+        and consumer nodes. The steps include:
+
+        1. Initialize a ChaskiStreamer instance for the producer with the CA's address.
+        2. Initialize a ChaskiStreamer instance for the consumer with the CA's address.
+        3. Request SSL certificates for both producer and consumer from the CA.
+        4. Run a secure transmission between producer and consumer to validate the
+           successful acquisition and usage of the SSL certificates.
+
+        Assertions
+        ----------
+        AssertionError
+            If there are issues in obtaining or using the SSL certificates.
+
+        Notes
+        -----
+        This test ensures the proper interaction with the CA to secure
+        communication channels.
+        """
+
+        producer = ChaskiStreamer(
+            port=65443,
+            name="Producer",
+            subscriptions=["topic1"],
+            reconnections=None,
+            ssl_certificates_location="tmp_certs_ca",
+        )
+
+        consumer = ChaskiStreamer(
+            port=65444,
+            name="Consumer",
+            subscriptions=["topic1"],
+            reconnections=None,
+            ssl_certificates_location="tmp_certs_ca",
+        )
+
+        await producer.request_ssl_certificate(
+            os.getenv("CHASKI_CERTIFICATE_AUTHORITY", "ChaskiCA@127.0.0.1:65432")
+        )
+        await consumer.request_ssl_certificate(
+            os.getenv("CHASKI_CERTIFICATE_AUTHORITY", "ChaskiCA@127.0.0.1:65432")
+        )
+
+        await run_transmission(producer, consumer, parent=self)

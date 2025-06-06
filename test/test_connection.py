@@ -28,7 +28,6 @@ import unittest
 import asyncio
 from chaski.utils.auto import create_nodes
 from typing import Optional
-from chaski.scripts import terminate_connections
 from chaski.node import ChaskiNode
 
 
@@ -44,7 +43,6 @@ class _TestConnections:
 
     async def asyncTearDown(self):
         for node in self.nodes:
-            print(f"Closing node {node.port}")
             await node.stop()
 
     #
@@ -65,7 +63,7 @@ class _TestConnections:
     #         await node.stop()
 
     def assertConnection(
-        self, node1: "ChaskiNode", node2: ChaskiNode, msg: Optional[str] = None
+        self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
     ):
         """
         Assert that two ChaskiNodes are connected to each other.
@@ -422,24 +420,31 @@ class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCa
         self.ip = "127.0.0.1"
         await asyncio.sleep(0)
 
+    @pytest.mark.asyncio
     async def test_single_connections(self):
         return await super().test_single_connections()
 
+    @pytest.mark.asyncio
     async def test_multiple_connections(self):
         return await super().test_multiple_connections()
 
+    @pytest.mark.asyncio
     async def test_disconnection(self):
         return await super().test_disconnection()
 
+    @pytest.mark.asyncio
     async def test_edges_disconnection(self):
         return await super().test_edges_disconnection()
 
+    @pytest.mark.asyncio
     async def test_edges_client_orphan(self):
         return await super().test_edges_client_orphan()
 
+    @pytest.mark.asyncio
     async def test_edges_server_orphan(self):
         return await super().test_edges_server_orphan()
 
+    @pytest.mark.asyncio
     async def test_response_udp(self):
         return await super().test_response_udp()
 
@@ -495,24 +500,31 @@ class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnectio
         self.ip = "::1"
         await asyncio.sleep(0)
 
+    @pytest.mark.asyncio
     async def test_single_connections(self):
         return await super().test_single_connections()
 
+    @pytest.mark.asyncio
     async def test_multiple_connections(self):
         return await super().test_multiple_connections()
 
+    @pytest.mark.asyncio
     async def test_disconnection(self):
         return await super().test_disconnection()
 
+    @pytest.mark.asyncio
     async def test_edges_disconnection(self):
         return await super().test_edges_disconnection()
 
+    @pytest.mark.asyncio
     async def test_edges_client_orphan(self):
         return await super().test_edges_client_orphan()
 
+    @pytest.mark.asyncio
     async def test_edges_server_orphan(self):
         return await super().test_edges_server_orphan()
 
+    @pytest.mark.asyncio
     async def test_response_udp(self):
         return await super().test_response_udp()
 

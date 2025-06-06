@@ -9,9 +9,11 @@ streaming of messages between producers and consumers within a distributed syste
 
 """
 
+import subprocess
 import pytest
 import unittest
 import asyncio
+import time
 import os
 from chaski.streamer import ChaskiStreamer
 from chaski.utils.auto import run_transmission
@@ -31,8 +33,12 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
     async def asyncTearDown(self):
         for node in self.nodes:
-            print(f"Closing node {node.port}")
             await node.stop()
+
+    @classmethod
+    def setUpClass(cls):
+        subprocess.run(["python", "scripts/streamer_root.py"], check=True)
+        time.sleep(1)
 
     @pytest.mark.asyncio
     async def test_stream(self) -> None:
@@ -52,14 +58,12 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data does not match the expected values.
         """
         producer = ChaskiStreamer(
-            port=65440,
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
         )
 
         consumer = ChaskiStreamer(
-            port=65441,
             name="Consumer",
             subscriptions=["topic1"],
             reconnections=None,
@@ -105,7 +109,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             )
 
         producer = ChaskiStreamer(
-            port=65440,
             name="Producer",
             subscriptions=["topicF"],
             reconnections=None,
@@ -117,7 +120,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         )
 
         consumer = ChaskiStreamer(
-            port=65441,
             name="Consumer",
             subscriptions=["topicF"],
             reconnections=None,
@@ -178,7 +180,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         """
 
         producer = ChaskiStreamer(
-            port=65440,
             name="Producer",
             subscriptions=["topicF"],
             reconnections=None,
@@ -189,7 +190,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         )
 
         consumer = ChaskiStreamer(
-            port=65441,
             name="Consumer",
             subscriptions=["topicF"],
             reconnections=None,
@@ -238,42 +238,36 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data at the final consumer does not match the expected values.
         """
         chain0 = ChaskiStreamer(
-            port=65440,
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain1 = ChaskiStreamer(
-            port=65441,
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain2 = ChaskiStreamer(
-            port=65442,
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain3 = ChaskiStreamer(
-            port=65443,
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain4 = ChaskiStreamer(
-            port=65444,
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain5 = ChaskiStreamer(
-            port=65445,
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
@@ -338,7 +332,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
             If the received data at the final consumer does not match the expected values.
         """
         chain0 = ChaskiStreamer(
-            port=65440,
             name="Producer 1",
             root=True,
             paired=True,
@@ -346,14 +339,12 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         )
 
         chain1 = ChaskiStreamer(
-            port=65441,
             name="Producer 2",
             subscriptions=["topic1"],
             reconnections=None,
         )
 
         chain2 = ChaskiStreamer(
-            port=65442,
             name="Producer 3",
             subscriptions=["topic1"],
             reconnections=None,
