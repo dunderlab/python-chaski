@@ -41,15 +41,15 @@ jobs:
     - name: Test connection IPv6
       run: |
         pytest test/test_connection.py::Test_Connections_for_IPv6 -v
-#    - name: Test discovery
-#      run: |
-#        pytest test/test_discovery.py -v
-#    - name: Test functions
-#      run: |
-#        pytest test/test_functions.py -v
-#    - name: Test subscription
-#      run: |
-#        pytest test/test_subscription.py -v
+    - name: Test discovery
+      run: |
+        pytest test/test_discovery.py -v
+    - name: Test functions
+      run: |
+        pytest test/test_functions.py -v
+    - name: Test subscription
+      run: |
+        pytest test/test_subscription.py -v
 #    - name: Test remote
 #      run: |
 #        pytest test/test_remote.py -v
