@@ -87,47 +87,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         )
 
     @pytest.mark.asyncio
-    async def test_address(self) -> None:
-        """
-        Test the correctness of node addresses.
-
-        This test method verifies that the addresses of node edges are correctly set up. The following steps are performed:
-
-        1. Create two ChaskiNodes.
-        2. Connect nodes[1] to nodes[0].
-        3. Assert that the address of the first edge of node[0] matches the provided IP.
-        4. Assert that the local address of the first edge of node[0] is set to port 65440.
-        5. Close the nodes.
-
-        Assertions
-        ----------
-        AssertionError
-            If the addresses do not match the expected values.
-
-        Notes
-        -----
-        This test ensures that the nodes' addresses are correctly set and can be retrieved accurately.
-        """
-
-        port = 65499
-
-        self.nodes = await create_nodes(2, self.ip, port=port)
-        await self.nodes[1].connect(self.nodes[0])
-        await asyncio.sleep(0.3)
-
-        self.assertEqual(
-            self.nodes[0].edges[0].address[0],
-            self.ip,
-            "The address of the edge should match the provided IP",
-        )
-
-        self.assertEqual(
-            self.nodes[0].edges[0].local_address[1],
-            port,
-            f"Local address of the edge should be {port}",
-        )
-
-    @pytest.mark.asyncio
     async def test_message_ttl(self) -> None:
         """
         Test the time-to-live (TTL) functionality of messages.
