@@ -151,24 +151,26 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         uuid1 = "3ea4e610-f276-4715-aa52-88d1cf14a295"
         uuid2 = "4c535672-949e-480f-9df4-9548a4cc2c1f"
 
+        path = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+
         # Configure the server SSL context for client authentication,
         # load the server's certificate and key, and set up the CA certificate for verification.
         server_ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         server_ssl_context.load_cert_chain(
-            certfile=f"certs_ca/server_{uuid1}.cert",
-            keyfile=f"certs_ca/server_{uuid1}.key",
+            certfile=f"{path}/certs_ca/server_{uuid1}.cert",
+            keyfile=f"{path}/certs_ca/server_{uuid1}.key",
         )
-        server_ssl_context.load_verify_locations(cafile="certs_ca/ca.cert")
+        server_ssl_context.load_verify_locations(cafile=f"{path}/certs_ca/ca.cert")
         server_ssl_context.verify_mode = ssl.CERT_REQUIRED
 
         # Configure the client SSL context for server authentication,
         # load the client's certificate and key, and set up the CA certificate for verification.
         client_ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         client_ssl_context.load_cert_chain(
-            certfile=f"certs_ca/client_{uuid1}.cert",
-            keyfile=f"certs_ca/client_{uuid1}.key",
+            certfile=f"{path}/certs_ca/client_{uuid1}.cert",
+            keyfile=f"{path}/certs_ca/client_{uuid1}.key",
         )
-        client_ssl_context.load_verify_locations(cafile="certs_ca/ca.cert")
+        client_ssl_context.load_verify_locations(cafile=f"{path}/certs_ca/ca.cert")
         client_ssl_context.verify_mode = ssl.CERT_REQUIRED
 
         # Initialize the ChaskiStreamer instance for the producer, configuring SSL contexts
@@ -187,20 +189,20 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         # load the second server's certificate and key, and set up the CA certificate for verification.
         server_ssl_context2 = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         server_ssl_context2.load_cert_chain(
-            certfile=f"certs_ca/server_{uuid2}.cert",
-            keyfile=f"certs_ca/server_{uuid2}.key",
+            certfile=f"{path}/certs_ca/server_{uuid2}.cert",
+            keyfile=f"{path}/certs_ca/server_{uuid2}.key",
         )
-        server_ssl_context2.load_verify_locations(cafile="certs_ca/ca.cert")
+        server_ssl_context2.load_verify_locations(cafile=f"{path}/certs_ca/ca.cert")
         server_ssl_context2.verify_mode = ssl.CERT_REQUIRED
 
         # Configure the second client SSL context for server authentication,
         # load the client's certificate and key, and set up the CA certificate for verification.
         client_ssl_context2 = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
         client_ssl_context2.load_cert_chain(
-            certfile=f"certs_ca/client_{uuid2}.cert",
-            keyfile=f"certs_ca/client_{uuid2}.key",
+            certfile=f"{path}/certs_ca/client_{uuid2}.cert",
+            keyfile=f"{path}/certs_ca/client_{uuid2}.key",
         )
-        client_ssl_context2.load_verify_locations(cafile="certs_ca/ca.cert")
+        client_ssl_context2.load_verify_locations(cafile=f"{path}/certs_ca/ca.cert")
         client_ssl_context2.verify_mode = ssl.CERT_REQUIRED
 
         # Initialize the ChaskiStreamer instance for the consumer, configuring SSL contexts
