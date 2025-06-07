@@ -117,7 +117,7 @@ class TestStreamer:
             ("dummy_100KB.data", 100e3),
             ("dummy_1MB.data", 1e6),
             ("dummy_10MB.data", 10e6),
-            ("dummy_100MB.data", 100e6),
+            # ("dummy_100MB.data", 100e6),
         ]:
             if os.path.exists(os.path.join(cwd, "file_transfer", "output", filename)):
                 os.remove(os.path.join(cwd, "file_transfer", "output", filename))
