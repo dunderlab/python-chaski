@@ -96,7 +96,7 @@ async def run_transmission(producer, consumer, parent=None):
         async for incoming_message in message_queue:
 
             if parent:
-                parent.assertEqual(f"test{count}", incoming_message.data["data"])
+                assert f"test{count}" == incoming_message.data["data"]
 
             if count >= 5:
                 await consumer.stop()
