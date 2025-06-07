@@ -1,46 +1,45 @@
 """
 ===========================================================
-TestRemote: Unit Test for `ChaskiRemote` Class Functionality
+TestRemote: Pytest Tests for `ChaskiRemote` Class Functionality
 ===========================================================
 
-This module contains unit tests for the `ChaskiRemote` class, which is part of the Chaski framework
+This module contains pytest tests for the `ChaskiRemote` class, which is part of the Chaski framework
 for distributed systems.
 
 Classes
 -------
-TestRemote : unittest.IsolatedAsyncioTestCase
-    A test case for testing the `ChaskiRemote` class functionality.
+TestRemote
+    A test class for testing the `ChaskiRemote` class functionality.
 """
 
 import pytest
-import unittest
+import pytest_asyncio
 import os
 import asyncio
 from chaski.remote import ChaskiRemote
 import numpy as np
 
-import logging
 
-logging.basicConfig(level=logging.DEBUG)
-
-
-class TestRemote(unittest.IsolatedAsyncioTestCase):
+@pytest.mark.asyncio
+class TestRemote:
     """
-    A test case for testing the ChaskiRemote class functionality.
+    A test class for testing the ChaskiRemote class functionality.
 
-    This test case uses the unittest.IsolatedAsyncioTestCase to facilitate
+    This test class uses pytest.mark.asyncio to facilitate
     asynchronous tests. It covers different scenarios to ensure the
     ChaskiRemote class behaves as expected.
     """
 
     nodes = []
 
-    async def asyncTearDown(self):
+    @pytest_asyncio.fixture(autouse=True)
+    async def cleanup(self):
+        """Cleanup fixture to stop all nodes after each test"""
+        yield
         for node in self.nodes:
             print(f"Closing node {node.port}")
             await node.stop()
 
-    @pytest.mark.asyncio
     async def test_module_no_available_register(self):
         """
         Test absence of module registration.
@@ -61,14 +60,14 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
             if the connection steps fail.
         """
         server = ChaskiRemote(
-            port=65440,
+            # port=65440,
             available=[],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
 
         client = ChaskiRemote(
-            port=65441,
+            # port=65441,
             reconnections=None,
         )
         await client.connect(server.address)
@@ -79,14 +78,13 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
 
         try:
             os_remote.name
-            self.fail("bad, the module has access")
+            pytest.fail("bad, the module has access")
         except:
-            self.assertTrue(True, "ok, the module has not access")
+            assert True, "ok, the module has not access"
 
         await server.stop()
         await client.stop()
 
-    @pytest.mark.asyncio
     async def test_module_register(self):
         """
         Test the registration and remote access of a specified module.
@@ -105,14 +103,14 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
             if any exceptions are encountered during the test steps.
         """
         server = ChaskiRemote(
-            port=65434,
+            # port=65434,
             available=["os"],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
 
         client = ChaskiRemote(
-            port=65435,
+            # port=65435,
             reconnections=None,
         )
         await client.connect(server.address)
@@ -121,13 +119,12 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         os_remote = client.proxy("os")
         await asyncio.sleep(0.3)
 
-        self.assertIsInstance(os_remote.listdir("."), list)
-        self.assertEqual(str(os_remote.name), os.name)
+        assert isinstance(os_remote.listdir("."), list)
+        assert str(os_remote.name) == os.name
 
         await server.stop()
         await client.stop()
 
-    @pytest.mark.asyncio
     async def test_secuential_calls(self):
         """
         Test multiple sequential calls to a remote module.
@@ -142,14 +139,14 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         4. Verify each call returns the expected results.
         """
         server = ChaskiRemote(
-            port=65434,
+            # port=65434,
             available=["os"],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
 
         client = ChaskiRemote(
-            port=65435,
+            # port=65435,
             reconnections=None,
         )
         await client.connect(server.address)
@@ -159,14 +156,13 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.3)
 
         for _ in range(10):
-            self.assertIsInstance(os_remote.listdir("."), list)
-            self.assertEqual(str(os_remote.name), os.name)
-            self.assertEqual(os_remote.name._, os.name)
+            assert isinstance(os_remote.listdir("."), list)
+            assert str(os_remote.name) == os.name
+            assert os_remote.name._ == os.name
 
         await server.stop()
         await client.stop()
 
-    @pytest.mark.asyncio
     async def test_numpy_calls(self):
         """
         Test remote access to numpy functionality.
@@ -181,14 +177,14 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         4. Verify the return values match expectations.
         """
         server = ChaskiRemote(
-            port=65434,
+            # port=65434,
             available=["numpy"],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
 
         client = ChaskiRemote(
-            port=65435,
+            # port=65435,
             reconnections=None,
         )
         await client.connect(server.address)
@@ -197,18 +193,14 @@ class TestRemote(unittest.IsolatedAsyncioTestCase):
         np_remote = client.proxy("numpy")
         await asyncio.sleep(0.3)
 
-        self.assertIsInstance(np_remote.pi._, float)
-        self.assertEqual(np_remote.random.normal(0, 1, size=(2, 2)).shape, (2, 2))
-        self.assertEqual(np_remote.random.normal(0, 1, size=(4, 4)).shape, (4, 4))
-        self.assertAlmostEqual(np_remote.pi._, 3.141592653589793)
+        assert isinstance(np_remote.pi._, float)
+        assert np_remote.random.normal(0, 1, size=(2, 2)).shape == (2, 2)
+        assert np_remote.random.normal(0, 1, size=(4, 4)).shape == (4, 4)
+        assert np.isclose(np_remote.pi._, 3.141592653589793)
 
         state = np_remote.random.get_state()
         seed = state[1][0]
-        self.assertIsInstance(seed, np.uint32)
+        assert isinstance(seed, np.uint32)
 
         await server.stop()
         await client.stop()
-
-
-if __name__ == "__main__":
-    unittest.main()

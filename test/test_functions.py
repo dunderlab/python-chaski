@@ -3,41 +3,45 @@
 Test Node Functions Module
 ==========================
 
-This module contains unit tests for validating the functionality and behavior
+This module contains pytest tests for validating the functionality and behavior
 of various node-related operations within the Chaski framework. The tests
 are designed to ensure the correct operation of nodes, addresses, message
 pinging, and message handling.
 
 Classes
 -------
-TestFunctions : unittest.IsolatedAsyncioTestCase
+TestFunctions
     Contains test cases for validating node operations, including ping tests,
     address verification, and message handling.
 """
 
 import pytest
+import pytest_asyncio
 import os
 import ssl
 import asyncio
-import unittest
 from chaski.node import Message, ChaskiNode
 from chaski.streamer import ChaskiStreamer
 from chaski.utils.auto import run_transmission, create_nodes
 from chaski.scripts import terminate_connections
 
 
-class TestFunctions(unittest.IsolatedAsyncioTestCase):
-    """"""
+@pytest.mark.asyncio
+class TestFunctions:
+    """Test class for various node functions and operations in the Chaski framework."""
 
     nodes = []
     ip = "127.0.0.1"
 
-    async def asyncTearDown(self):
+    @pytest_asyncio.fixture(autouse=True)
+    async def cleanup(self):
+        """Cleanup fixture to stop all nodes after each test"""
+        yield
         for node in self.nodes:
             print(f"Closing node {node.port}")
             await node.stop()
+        await asyncio.sleep(1)
 
-    @pytest.mark.asyncio
     async def test_ping(self) -> None:
         """
         Test the ping functionality between ChaskiNode instances.
@@ -71,22 +75,17 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         await self.nodes[0].ping(self.nodes[0].edges[1], size=100000)
         await asyncio.sleep(1)
 
-        self.assertGreater(
-            self.nodes[0].edges[1].latency,
-            self.nodes[0].edges[0].latency,
-            "Latency of the second edge should be greater than the latency of the first edge",
-        )
+        assert (
+            self.nodes[0].edges[1].latency > self.nodes[0].edges[0].latency
+        ), "Latency of the second edge should be greater than the latency of the first edge"
 
         self.nodes[0].edges[0].reset_latency()
         self.nodes[0].edges[1].reset_latency()
 
-        self.assertEqual(
-            self.nodes[0].edges[1].latency,
-            self.nodes[0].edges[0].latency,
-            "Latencies of the two edges should be equal after resetting",
-        )
+        assert (
+            self.nodes[0].edges[1].latency == self.nodes[0].edges[0].latency
+        ), "Latencies of the two edges should be equal after resetting"
 
-    @pytest.mark.asyncio
     async def test_message_ttl(self) -> None:
         """
         Test the time-to-live (TTL) functionality of messages.
@@ -111,13 +110,10 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
         message.decrement_ttl()
         message.decrement_ttl()
 
-        self.assertEqual(
-            message.ttl,
-            8,
-            "The TTL should be decremented by 2 from the initial value of 10",
-        )
+        assert (
+            message.ttl == 8
+        ), "The TTL should be decremented by 2 from the initial value of 10"
 
-    @pytest.mark.asyncio
     async def test_ssl_certificate(self) -> None:
         """
         Test the SSL certificate configuration for secure communication.
@@ -219,7 +215,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
-    @pytest.mark.asyncio
     async def test_ssl_certificate_CA_inline(self) -> None:
         """
         Test the inline requesting of SSL certificates from the Certificate Authority (CA).
@@ -269,7 +264,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
 
         await run_transmission(producer, consumer, parent=self)
 
-    @pytest.mark.asyncio
     async def test_ssl_certificate_CA_off(self) -> None:
         """
         Test the behavior of requesting SSL certificates from a non-existent CA.
@@ -304,11 +298,6 @@ class TestFunctions(unittest.IsolatedAsyncioTestCase):
                 request_ssl_certificate="ChaskiCA@127.0.0.1:1111",
             )
         except:
-            self.assertTrue(
-                True,
-                "SSL certificate request should raise an error with an incorrect CA address.",
-            )
-
-
-if __name__ == "__main__":
-    unittest.main()
+            assert (
+                True
+            ), "SSL certificate request should raise an error with an incorrect CA address."

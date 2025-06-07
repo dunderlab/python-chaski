@@ -24,7 +24,7 @@ Test_Connections_for_IPv6:
 """
 
 import pytest
-import unittest
+import pytest_asyncio
 import asyncio
 from chaski.utils.auto import create_nodes
 from typing import Optional
@@ -41,7 +41,7 @@ class _TestConnections:
     communication protocols, such as IPv4 and IPv6.
     """
 
-    def assertConnection(
+    def assert_connection(
         self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
     ):
         """
@@ -67,7 +67,9 @@ class _TestConnections:
             If `node1` is not connected to `node2` or `node2` is not connected to `node1`.
         """
         conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
-        return self.assertTrue(conn, msg)
+        if not conn and msg is not None:
+            pytest.fail(msg)
+        assert conn
 
     @pytest.mark.asyncio
     async def test_single_connections(self):
@@ -96,7 +98,7 @@ class _TestConnections:
         await self._wait_for_connections()
 
         for i, node in enumerate(self.nodes, start=1):
-            self.assertEqual(len(node.edges), 1, f"Node {i} connection failed")
+            assert len(node.edges) == 1, f"Node {i} connection failed"
 
     @pytest.mark.asyncio
     async def test_multiple_connections(self):
@@ -126,12 +128,11 @@ class _TestConnections:
         await self._wait_for_connections()
 
         for i, node in enumerate(self.nodes[1:], start=1):
-            self.assertEqual(
-                len(node.edges), 1, f"Node {i}'s connection to Node 0 failed"
-            )
-        self.assertEqual(
-            len(self.nodes[0].edges), 4, f"Node 0 failed to establish all connections"
-        )
+            assert len(node.edges) == 1, f"Node {i}'s connection to Node 0 failed"
+
+        assert (
+            len(self.nodes[0].edges) == 4
+        ), f"Node 0 failed to establish all connections"
 
     @pytest.mark.asyncio
     async def test_disconnection(self):
@@ -165,9 +166,9 @@ class _TestConnections:
 
         await self._wait_for_connections()
 
-        self.assertEqual(len(self.nodes[0].edges), 0, "Node 0 not disconnected")
+        assert len(self.nodes[0].edges) == 0, "Node 0 not disconnected"
         for i, node in enumerate(self.nodes[1:], start=1):
-            self.assertEqual(len(node.edges), 0, f"Node {i} not disconnected")
+            assert len(node.edges) == 0, f"Node {i} not disconnected"
 
     @pytest.mark.asyncio
     async def test_edges_disconnection(self):
@@ -210,17 +211,14 @@ class _TestConnections:
         for i, edge in enumerate(edges):
             await self.nodes[0].close_connection(edge)
             await self._wait_for_connections()
-            self.assertEqual(
-                len(self.nodes[0].edges), 4 - i, "Node 0 connections failed"
-            )
+            assert len(self.nodes[0].edges) == 4 - i, "Node 0 connections failed"
 
         await self._wait_for_connections()
 
         for i in range(1, 5):
-            self.assertEqual(
-                len(self.nodes[i].edges), 1, f"Node {i} connections failed"
-            )
-        self.assertEqual(len(self.nodes[5].edges), 4, "Node 6 connections failed")
+            assert len(self.nodes[i].edges) == 1, f"Node {i} connections failed"
+
+        assert len(self.nodes[5].edges) == 4, "Node 6 connections failed"
 
     @pytest.mark.asyncio
     async def test_edges_client_orphan(self):
@@ -250,10 +248,10 @@ class _TestConnections:
 
         await self._wait_for_connections()
 
-        self.assertEqual(len(self.nodes[0].edges), 4, "Node 0 connections failed")
+        assert len(self.nodes[0].edges) == 4, "Node 0 connections failed"
 
         for i, node in enumerate(self.nodes[1:], start=1):
-            self.assertEqual(len(node.edges), 1, f"Node {i} connections failed")
+            assert len(node.edges) == 1, f"Node {i} connections failed"
 
         for node in self.nodes[1:]:
             await node.close_connection(node.edges[0])
@@ -261,11 +259,9 @@ class _TestConnections:
         await self._wait_for_connections()
 
         for i, node in enumerate(self.nodes):
-            self.assertEqual(
-                len(node.edges),
-                0,
-                f"Node {i} connections failed after orphan detection",
-            )
+            assert (
+                len(node.edges) == 0
+            ), f"Node {i} connections failed after orphan detection"
 
     @pytest.mark.asyncio
     async def test_edges_server_orphan(self):
@@ -295,21 +291,20 @@ class _TestConnections:
 
         await self._wait_for_connections()
 
-        self.assertEqual(len(self.nodes[0].edges), 4, "Node 0 connections failed")
+        assert len(self.nodes[0].edges) == 4, "Node 0 connections failed"
         for i, node in enumerate(self.nodes[1:], start=1):
-            self.assertEqual(len(node.edges), 1, f"Node {i} connections failed")
+            assert len(node.edges) == 1, f"Node {i} connections failed"
 
-        for edge in self.nodes[0].edges:
+        edges = self.nodes[0].edges.copy()
+        for edge in edges:
             await self.nodes[0].close_connection(edge)
 
         await self._wait_for_connections()
 
         for i, node in enumerate(self.nodes):
-            self.assertEqual(
-                len(node.edges),
-                0,
-                f"Node {i} connections failed after orphan detection",
-            )
+            assert (
+                len(node.edges) == 0
+            ), f"Node {i} connections failed after orphan detection"
 
     @pytest.mark.asyncio
     async def test_response_udp(self):
@@ -342,46 +337,21 @@ class _TestConnections:
             self.nodes[0].uuid(): self.nodes[0].uuid(),
         }
         response_data = await self.nodes[0]._test_generic_request_udp(dummy_data)
-        self.assertEqual(
-            dummy_data, response_data, "Mismatch between sent and received data"
-        )
+        assert dummy_data == response_data, "Mismatch between sent and received data"
 
 
-class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCase):
+@pytest.mark.asyncio
+class Test_Connections_for_IPv4(_TestConnections):
     """
     Unit tests for testing connections between ChaskiNode instances using IPv4.
 
-    This class extends the `TestConnections` base class and utilizes the
-    asynchronous test case capabilities provided by `unittest.IsolatedAsyncioTestCase`.
-    It specifically tests connections over IPv4.
+    This class extends the `TestConnections` base class and utilizes pytest-asyncio
+    for asynchronous test execution. It specifically tests connections over IPv4.
 
     Attributes
     ----------
     ip : str
         The IPv4 address used for creating and connecting nodes, set to '127.0.0.1'.
-
-    Methods
-    -------
-    asyncSetUp()
-        Sets up the test environment for IPv4 connections by initializing the IPv4 address.
-
-    async test_single_connections()
-        Tests the ability of ChaskiNode instances to establish single peer-to-peer connections over IPv4.
-
-    async test_multiple_connections()
-        Tests the ability of a single ChaskiNode to handle multiple peer-to-peer connections over IPv4.
-
-    async test_disconnection()
-        Tests the ability of nodes to handle disconnection events over IPv4.
-
-    async test_edges_disconnection()
-        Evaluates the behavior and stability of ChaskiNodes when edge nodes disconnect progressively over IPv4.
-
-    async test_edges_client_orphan()
-        Assesses how the system handles edge nodes acting as clients becoming orphaned over IPv4.
-
-    async test_edges_server_orphan()
-        Evaluates the handling of server-edge nodes becoming orphaned over IPv4.
     """
 
     ip = "127.0.0.1"
@@ -391,75 +361,27 @@ class Test_Connections_for_IPv4(_TestConnections, unittest.IsolatedAsyncioTestCa
         for i in range(10):
             await asyncio.sleep(0.3)
 
-    async def asyncTearDown(self):
+    @pytest_asyncio.fixture(autouse=True)
+    async def cleanup(self):
+        """Cleanup fixture to stop all nodes after each test"""
+        yield
         for node in self.nodes:
             await node.stop()
         await self._wait_for_connections()
 
-    @pytest.mark.asyncio
-    async def test_single_connections(self):
-        return await super().test_single_connections()
 
-    @pytest.mark.asyncio
-    async def test_multiple_connections(self):
-        return await super().test_multiple_connections()
-
-    @pytest.mark.asyncio
-    async def test_disconnection(self):
-        return await super().test_disconnection()
-
-    @pytest.mark.asyncio
-    async def test_edges_disconnection(self):
-        return await super().test_edges_disconnection()
-
-    @pytest.mark.asyncio
-    async def test_edges_client_orphan(self):
-        return await super().test_edges_client_orphan()
-
-    @pytest.mark.asyncio
-    async def test_edges_server_orphan(self):
-        return await super().test_edges_server_orphan()
-
-    @pytest.mark.asyncio
-    async def test_response_udp(self):
-        return await super().test_response_udp()
-
-
-class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnections):
+@pytest.mark.asyncio
+class Test_Connections_for_IPv6(_TestConnections):
     """
     Unit tests for testing connections between ChaskiNode instances using IPv6.
 
-    This class extends the `TestConnections` base class and utilizes the
-    asynchronous test case capabilities provided by `unittest.IsolatedAsyncioTestCase`.
-    It specifically tests connections over IPv6.
+    This class extends the `TestConnections` base class and utilizes pytest-asyncio
+    for asynchronous test execution. It specifically tests connections over IPv6.
 
     Attributes
     ----------
     ip : str
         The IPv6 address used for creating and connecting nodes, set to '::1'.
-
-    Methods
-    -------
-    asyncSetUp()
-        Sets up the test environment for IPv6 connections by initializing the ip address.
-
-    async test_single_connections()
-        Tests the ability of ChaskiNode instances to establish single peer-to-peer connections over IPv6.
-
-    async test_multiple_connections()
-        Tests the ability of a single ChaskiNode to handle multiple peer-to-peer connections over IPv6.
-
-    async test_disconnection()
-        Tests the ability of nodes to handle disconnection events over IPv6.
-
-    async test_edges_disconnection()
-        Evaluates the behavior and stability of ChaskiNodes when edge nodes disconnect progressively over IPv6.
-
-    async test_edges_client_orphan()
-        Assesses how the system handles edge nodes acting as clients becoming orphaned over IPv6.
-
-    async test_edges_server_orphan()
-        Evaluates the handling of server-edge nodes becoming orphaned over IPv6.
     """
 
     ip = "::1"
@@ -469,39 +391,10 @@ class Test_Connections_for_IPv6(unittest.IsolatedAsyncioTestCase, _TestConnectio
         for i in range(10):
             await asyncio.sleep(0.3)
 
-    async def asyncTearDown(self):
+    @pytest_asyncio.fixture(autouse=True)
+    async def cleanup(self):
+        """Cleanup fixture to stop all nodes after each test"""
+        yield
         for node in self.nodes:
             await node.stop()
         await self._wait_for_connections()
-
-    @pytest.mark.asyncio
-    async def test_single_connections(self):
-        return await super().test_single_connections()
-
-    @pytest.mark.asyncio
-    async def test_multiple_connections(self):
-        return await super().test_multiple_connections()
-
-    @pytest.mark.asyncio
-    async def test_disconnection(self):
-        return await super().test_disconnection()
-
-    @pytest.mark.asyncio
-    async def test_edges_disconnection(self):
-        return await super().test_edges_disconnection()
-
-    @pytest.mark.asyncio
-    async def test_edges_client_orphan(self):
-        return await super().test_edges_client_orphan()
-
-    @pytest.mark.asyncio
-    async def test_edges_server_orphan(self):
-        return await super().test_edges_server_orphan()
-
-    @pytest.mark.asyncio
-    async def test_response_udp(self):
-        return await super().test_response_udp()
-
-
-if __name__ == "__main__":
-    unittest.main()
