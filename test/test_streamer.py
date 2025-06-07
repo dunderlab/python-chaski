@@ -37,7 +37,14 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls):
-        subprocess.run(["python", "scripts/streamer_root.py"], check=True)
+        path = os.path.abspath(
+            os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+        )
+        cls.streamer_process = subprocess.Popen(
+            ["python", f"{path}/chaski/scripts/streamer_root.py"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         time.sleep(1)
 
     @pytest.mark.asyncio
