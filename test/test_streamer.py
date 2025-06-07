@@ -34,45 +34,6 @@ class TestStreamer(unittest.IsolatedAsyncioTestCase):
         for node in self.nodes:
             await node.stop()
 
-    @classmethod
-    def tearDownClass(cls):
-        if cls.streamer_process:
-            cls.streamer_process.terminate()
-            try:
-                cls.streamer_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                cls.streamer_process.kill()
-
-    @classmethod
-    def setUpClass(cls):
-        path = os.path.abspath(
-            os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        )
-        env = os.environ.copy()
-        # env["PYTHONPATH"] = f"{env.get('PYTHONPATH', '')}{path}"
-        # print(env["PYTHONPATH"])
-
-        cls.streamer_process = subprocess.Popen(
-            ["python", f"{path}/chaski/scripts/streamer_root.py"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=env,
-        )
-        time.sleep(1)
-
-        # if cls.streamer_process.poll() is not None:
-        #     out, err = cls.streamer_process.communicate()
-        #     print(">>> CRASH DETECTED")
-        #     print("STDOUT:\n", out)
-        #     print("STDERR:\n", err)
-        #     raise RuntimeError("streamer_root.py died unexpectedly")
-        # else:
-        #     out, err = cls.streamer_process.communicate()
-        #     print("streamer_root.py is running OK")
-        #     print("STDOUT:\n", out)
-        #     print("STDERR:\n", err)
-
     @pytest.mark.asyncio
     async def test_stream(self) -> None:
         """

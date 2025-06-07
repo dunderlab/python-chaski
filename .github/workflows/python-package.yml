@@ -55,6 +55,8 @@ jobs:
 #        pytest test/test_remote.py -v
     - name: Test streamer
       run: |
+        python chaski/scripts/streamer_root.py &
+        sleep(2)
         pytest test/test_streamer.py -v
 #    - name: Test celery
 #      run: |
