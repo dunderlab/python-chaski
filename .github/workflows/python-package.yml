@@ -56,9 +56,9 @@ jobs:
     - name: Test streamer
       run: |
         pytest test/test_streamer.py -v
+    - name: Test certificate authority
+      run: |
+        pytest test/test_certificate_authority.py -v
 #    - name: Test celery
 #      run: |
 #        pytest test/test_celery.py -v
-#    - name: Test certificate authority
-#      run: |
-#        pytest test/test_certificate_authority.py -v

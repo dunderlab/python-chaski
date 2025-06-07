@@ -1,9 +1,10 @@
 import os
 import subprocess
 import sys
+import signal
 
 
-def close_connections(port):
+def close_connections(port, mode="ALL", signal=signal.SIGKILL):
     """"""
 
     try:
@@ -14,11 +15,17 @@ def close_connections(port):
             text=True,
         )
         pids = result.stdout.strip().splitlines()
+        pids = sorted(pids)
 
-        if pids:
-            # Close all active connections
-            for pid in pids:
-                os.kill(int(pid), 9)
+        if mode == "ALL":
+            if pids:
+                # Close all active connections
+                for pid in pids:
+                    os.kill(int(pid), signal)
+        elif mode == "LATEST":
+            os.kill(int(pids[-1]), signal)
+        elif mode == "FIRST":
+            os.kill(int(pids[0]), signal)
 
     except Exception as e:
         print(
@@ -39,7 +46,7 @@ def main(nodes=None):
             nodes = range(START_PORT, END_PORT + 1)
 
         except:
-            nodes = range(65440, 65500 + 1)
+            nodes = range(65430, 65500 + 1)
 
     # Iterate over the range of ports and close active connections
     for port in nodes:

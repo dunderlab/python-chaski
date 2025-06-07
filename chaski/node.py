@@ -442,6 +442,7 @@ class ChaskiNode:
         reconnections: int = 32,
         messages_pool_maxzise: int = 128,
         message_propagation: bool = False,
+        keep_alive: bool = True,
         ssl_context_client: Optional[ssl.SSLContext] = None,
         ssl_context_server: Optional[ssl.SSLContext] = None,
         ssl_certificate_attributes: Optional[dict] = {},
@@ -528,6 +529,7 @@ class ChaskiNode:
         self.root = root
         self.reconnections = reconnections
         self.message_propagation = message_propagation
+        self.keep_alive = keep_alive
         self.ssl_context_client = ssl_context_client
         self.ssl_context_server = ssl_context_server
 
@@ -1394,7 +1396,8 @@ class ChaskiNode:
         # Logging the server address and starting keep-alive task
         addr = self.server.sockets[0].getsockname()
         logger_main.debug(f"{self.name}: Serving at address {addr}.")
-        self._keep_alive_task = self.track_task(self._keep_alive())
+        if self.keep_alive:
+            self._keep_alive_task = self.track_task(self._keep_alive())
 
         # Start serving TCP connections forever
         async with self.server:

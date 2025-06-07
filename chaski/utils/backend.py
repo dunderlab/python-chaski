@@ -29,6 +29,7 @@ class ChaskiBackend(BaseBackend):
             subscriptions=["storage"],
             paired=True,
             persistent_storage=True,
+            # keep_alive=False,
         )
         self.storage.connect(
             os.getenv("CHASKI_STREAMER_ROOT", "*ChaskiStreamer@127.0.0.1:65433")

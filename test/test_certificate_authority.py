@@ -1,6 +1,6 @@
 """
 =============================================
-Unit tests for the CertificateAuthority class
+Pytest tests for the CertificateAuthority class
 =============================================
 
 These tests ensure the correct functionality of the CertificateAuthority,
@@ -9,27 +9,18 @@ certificate signing requests (CSRs), and the signing of CSRs.
 
 Dependencies:
 - os
-- unittest
+- pytest
 - ipaddress
 - cryptography (x509, default_backend, padding, hashes, serialization)
 - chaski.utils.certificate_authority (CertificateAuthority)
-
-Classes:
-- TestCertificateAuthority: Unit tests for CertificateAuthority.
-
-Methods:
-- setUpClass: Sets up the class by creating a directory for SSL certificates.
-- ca: Property that returns an instance of CertificateAuthority for testing.
-- test_ca: Tests the creation of CA certificate and private key.
-- test_csr: Tests the generation of private keys and CSRs.
-- test_sign: Tests signing of client and server CSRs by the CA.
 """
 
 import os
 import pytest
-import unittest
 import ipaddress
-
+import subprocess
+import sys
+import time
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -41,37 +32,50 @@ from chaski.utils.auto import run_transmission
 from chaski.streamer import ChaskiStreamer
 
 
-class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
-    """"""
+@pytest.fixture(scope="class")
+def setup_ca(request):
+    path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    env = os.environ.copy()
+    env["PYTHONPATH"] = ":".join(sys.path + [path])
 
-    ssl_certificates_location = "ssl_certificates_location"
-    name = "Test-ID"
-    # name = "3ea4e610-f276-4715-aa52-88d1cf14a295"
-    # name = "4c535672-949e-480f-9df4-9548a4cc2c1f"
+    process_streamer = subprocess.Popen(
+        [sys.executable, f"{path}/chaski/scripts/certificate_authority.py"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
+    time.sleep(1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_ca")
+class TestCertificateAuthority:
+    """Test suite for the CertificateAuthority class using pytest."""
+
+    # Class-level constants
+    SSL_CERTIFICATES_LOCATION = "ssl_certificates_location"
+    TEST_NAME = "Test-ID"
+    # TEST_NAME = "3ea4e610-f276-4715-aa52-88d1cf14a295"
+    # TEST_NAME = "4c535672-949e-480f-9df4-9548a4cc2c1f"
 
     @classmethod
-    def setUpClass(cls) -> None:
+    def setup_class(cls):
         """Set up the class for the Certificate Authority tests.
 
         This method is a class-level setup method that prepares the
         environment for testing the Certificate Authority (CA). It
         creates a directory for storing SSL certificates if it does
         not already exist.
-
-        Attributes
-        ----------
-        cls.ssl_certificates_location : str
-            The location where SSL certificates are stored.
         """
-        cls.ssl_certificates_location = "ssl_certificates_location"
-        if not os.path.exists(cls.ssl_certificates_location):
-            os.mkdir(cls.ssl_certificates_location)
+        if not os.path.exists(cls.SSL_CERTIFICATES_LOCATION):
+            os.mkdir(cls.SSL_CERTIFICATES_LOCATION)
 
-    @property
-    def ca(self) -> CertificateAuthority:
+    @pytest.fixture
+    def certificate_authority(self):
         """Create and return a CertificateAuthority instance.
 
-        This method instantiates a CertificateAuthority object with preset
+        This fixture instantiates a CertificateAuthority object with preset
         configurations for testing purposes. The attributes include an ID,
         an IP address, the SSL certificates location, and SSL certificate
         attributes like the country, locality, organization, state, and common name.
@@ -82,9 +86,9 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
             An instance of CertificateAuthority configured for testing.
         """
         ca = CertificateAuthority(
-            self.name,
+            self.TEST_NAME,
             ipaddress.IPv4Address("127.0.0.1"),
-            ssl_certificates_location=self.ssl_certificates_location,
+            ssl_certificates_location=self.SSL_CERTIFICATES_LOCATION,
             ssl_certificate_attributes={
                 "Country Name": "CO",
                 "Locality Name": "Manizales",
@@ -96,31 +100,23 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         return ca
 
     @pytest.mark.asyncio
-    def test_ca(self) -> None:
+    async def test_ca(self, certificate_authority):
         """Test the creation of CA certificate and private key.
 
         This test verifies the functionality of the `setup_certificate_authority` method
         in the `CertificateAuthority` class. It ensures that the CA certificate and private key
         are generated and saved correctly. Additionally, it performs a validation to check
         if the private key corresponds to the generated certificate by signing and verifying a message.
-
-        Raises
-        ------
-        AssertionError
-            If the CA certificate or private key files do not exist.
-            If the private key does not correspond to the generated certificate.
         """
-        ca = self.ca
+        ca = certificate_authority
         ca.setup_certificate_authority()
 
-        self.assertTrue(
-            os.path.exists(ca.ca_certificate_path),
-            "ca_certificate_path does not exist",
-        )
-        self.assertTrue(
-            os.path.exists(ca.ca_private_key_path),
-            "ca_private_key_path does not exist",
-        )
+        assert os.path.exists(
+            ca.ca_certificate_path
+        ), "ca_certificate_path does not exist"
+        assert os.path.exists(
+            ca.ca_private_key_path
+        ), "ca_private_key_path does not exist"
 
         certificate = x509.load_pem_x509_certificate(
             ca.load_certificate(ca.ca_certificate_path), default_backend()
@@ -136,52 +132,30 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
 
         try:
             message = b"Test message"
-
             signature = private_key.sign(message, padding.PKCS1v15(), hashes.SHA256())
-
             public_key.verify(signature, message, padding.PKCS1v15(), hashes.SHA256())
-            self.assertTrue(True, "The private key corresponds to the certificate.")
+            assert True, "The private key corresponds to the certificate."
         except Exception as e:
-            self.assertTrue(
-                False,
-                f"The private key does not correspond to the certificate: {str(e)}",
+            pytest.fail(
+                f"The private key does not correspond to the certificate: {str(e)}"
             )
 
     @pytest.mark.asyncio
-    def test_csr(self) -> None:
+    async def test_csr(self, certificate_authority):
         """Test the generation of private keys and CSRs.
 
         This test verifies the functionality of the `generate_key_and_csr` method
         in the `CertificateAuthority` class. It ensures that both client and server
         private keys and certificate signing requests (CSRs) are generated and saved correctly.
         It also verifies that the moduli of the private keys match those of the corresponding CSRs.
-
-        Raises
-        ------
-        AssertionError
-            If the private key or CSR files for either client or server do not exist.
-            If the moduli of the private keys do not match those of the corresponding CSRs.
         """
-        ca = self.ca
-
+        ca = certificate_authority
         ca.generate_key_and_csr()
 
-        self.assertTrue(
-            os.path.exists(ca.private_key_paths["client"]),
-            "",
-        )
-        self.assertTrue(
-            os.path.exists(ca.private_key_paths["server"]),
-            "",
-        )
-        self.assertTrue(
-            os.path.exists(ca.certificate_paths["client"]),
-            "",
-        )
-        self.assertTrue(
-            os.path.exists(ca.certificate_paths["server"]),
-            "",
-        )
+        assert os.path.exists(ca.private_key_paths["client"])
+        assert os.path.exists(ca.private_key_paths["server"])
+        assert os.path.exists(ca.certificate_paths["client"])
+        assert os.path.exists(ca.certificate_paths["server"])
 
         def key_modulus(key: bytes) -> int:
             private_key = serialization.load_pem_private_key(
@@ -202,11 +176,9 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         client_csr_modulus = csr_modulus(
             ca.load_certificate(ca.certificate_paths["client"])
         )
-        self.assertEqual(
-            client_key_modulus,
-            client_csr_modulus,
-            "Client key modulus does not match client CSR modulus",
-        )
+        assert (
+            client_key_modulus == client_csr_modulus
+        ), "Client key modulus does not match client CSR modulus"
 
         server_key_modulus = key_modulus(
             ca.load_certificate(ca.private_key_paths["server"])
@@ -214,14 +186,12 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         server_csr_modulus = csr_modulus(
             ca.load_certificate(ca.certificate_paths["server"])
         )
-        self.assertEqual(
-            server_key_modulus,
-            server_csr_modulus,
-            "Server key modulus does not match Server CSR modulus",
-        )
+        assert (
+            server_key_modulus == server_csr_modulus
+        ), "Server key modulus does not match Server CSR modulus"
 
     @pytest.mark.asyncio
-    def test_sign(self) -> None:
+    async def test_sign(self, certificate_authority):
         """Test signing of client and server CSRs by the CA.
 
         This test verifies the functionality of the `sign_csr` method
@@ -229,32 +199,26 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         certificate signing requests (CSRs) are signed correctly by the CA.
         After signing the CSRs, it checks that the signatures on the resulting
         certificates are valid and were created by the CA's private key.
-
-        Raises
-        ------
-        AssertionError
-            If there is an issue loading the CA certificates or keys.
-            If the client or server certificate was not signed by the CA properly.
         """
-        ca = self.ca
+        ca = certificate_authority
 
         ca.load_ca(
-            ca_key_path=os.path.join(self.ssl_certificates_location, "ca.key"),
-            ca_cert_path=os.path.join(self.ssl_certificates_location, "ca.cert"),
+            ca_key_path=os.path.join(self.SSL_CERTIFICATES_LOCATION, "ca.key"),
+            ca_cert_path=os.path.join(self.SSL_CERTIFICATES_LOCATION, "ca.cert"),
         )
 
         ca.load_key_and_csr(
             private_key_client_path=os.path.join(
-                self.ssl_certificates_location, f"client_{self.name}.key"
+                self.SSL_CERTIFICATES_LOCATION, f"client_{self.TEST_NAME}.key"
             ),
             certificate_client_path=os.path.join(
-                self.ssl_certificates_location, f"client_{self.name}.csr"
+                self.SSL_CERTIFICATES_LOCATION, f"client_{self.TEST_NAME}.csr"
             ),
             private_key_server_path=os.path.join(
-                self.ssl_certificates_location, f"server_{self.name}.key"
+                self.SSL_CERTIFICATES_LOCATION, f"server_{self.TEST_NAME}.key"
             ),
             certificate_server_path=os.path.join(
-                self.ssl_certificates_location, f"server_{self.name}.csr"
+                self.SSL_CERTIFICATES_LOCATION, f"server_{self.TEST_NAME}.csr"
             ),
         )
 
@@ -285,12 +249,8 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
                 padding.PKCS1v15(),
                 client_cert.signature_hash_algorithm,
             )
-            self.assertTrue(True, "The client certificate was signed by the CA.")
         except Exception as e:
-            self.assertTrue(
-                False,
-                f"The client certificate was NOT signed by the CA: {str(e)}",
-            )
+            pytest.fail(f"The client certificate was NOT signed by the CA: {str(e)}")
 
         try:
             ca_public_key.verify(
@@ -299,15 +259,11 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
                 padding.PKCS1v15(),
                 server_cert.signature_hash_algorithm,
             )
-            self.assertTrue(True, "The server certificate was signed by the CA.")
         except Exception as e:
-            self.assertTrue(
-                False,
-                f"The server certificate was NOT signed by the CA: {str(e)}",
-            )
+            pytest.fail(f"The server certificate was NOT signed by the CA: {str(e)}")
 
     @pytest.mark.asyncio
-    async def test_ssl_certificate_CA(self) -> None:
+    async def test_ssl_certificate_CA(self):
         """
         Test requesting SSL certificates from the Certificate Authority (CA).
 
@@ -320,18 +276,7 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
         3. Request SSL certificates for both producer and consumer from the CA.
         4. Run a secure transmission between producer and consumer to validate the
            successful acquisition and usage of the SSL certificates.
-
-        Assertions
-        ----------
-        AssertionError
-            If there are issues in obtaining or using the SSL certificates.
-
-        Notes
-        -----
-        This test ensures the proper interaction with the CA to secure
-        communication channels.
         """
-
         producer = ChaskiStreamer(
             port=65443,
             name="Producer",
@@ -355,4 +300,5 @@ class TestCertificateAuthority(unittest.IsolatedAsyncioTestCase):
             os.getenv("CHASKI_CERTIFICATE_AUTHORITY", "ChaskiCA@127.0.0.1:65432")
         )
 
+        # Ahora podemos usar self como parent (disponible en clase)
         await run_transmission(producer, consumer, parent=self)
