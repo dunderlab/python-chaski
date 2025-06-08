@@ -75,6 +75,21 @@ The framework offers a flexible configuration system, allowing users to customiz
 **Logging and Monitoring:**
 Comprehensive logging and monitoring capabilities are integrated into the framework, providing real-time insights into the network activity and performance metrics. This aids in troubleshooting and maintaining the health of the system.
 
+**File Streaming and Transfer:**
+ChaskiStreamer includes helpers to send files in chunks through the network using `push_file` and to accept incoming files when `allow_incoming_files` is enabled. This facilitates distributing large payloads without blocking the event loop.
+
+**Persistent Storage:**
+Nodes can store key/value pairs using an SQLite-backed `PersistentStorage`. Data can be requested or served to peers with the `ChaskiStorageRequest` message type.
+
+**Synchronous Interface:**
+`ChaskiStreamerSync` wraps the asynchronous streamer in a dedicated thread, offering a blocking API that integrates with traditional synchronous code bases.
+
+**Celery Integration:**
+The package ships with a custom Kombu transport (`chaski.utils.transport`) so Chaski can act as a Celery broker or backend.
+
+**Message Pool with TTL:**
+Each node keeps a bounded pool of recently processed messages. This avoids processing duplicates and provides a configurable time-to-live for cached entries.
+
 
 ## Chaski-Confluent components
 
@@ -83,13 +98,21 @@ Comprehensive logging and monitoring capabilities are integrated into the framew
 The Chaski_ Node is an essential component of the Chaski-Confluent system. It is responsible for initiating and managing
 network communication between distributed nodes. This class handles functions such as connection establishment,
 message passing, node discovery, and pairing based on shared subscriptions.
+Nodes keep track of their connections as "edges" where latency information and
+subscription data are stored. Each node can propagate received messages to its
+peers and caches recent messages in a bounded pool to avoid processing
+duplicates.
 
 ### Chaski Streamer
 
 The Chaski-Streamer extends the functionality of Chaski-Node by introducing asynchronous message streaming capabilities.
 It sets up an internal message queue to manage incoming messages, allowing efficient and scalable message processing within a distributed environment.
 The ChaskiStreamer can enter an asynchronous context, enabling the user to stream messages using the `async with` statement.
-This allows for handling messages dynamically as they arrive, enhancing the responsiveness and flexibility of the system.
+This allows for handling messages dynamically as they arrive, enhancing the
+responsiveness and flexibility of the system. The streamer also supports
+chunked file transfer via `push_file` and can store temporary results in a
+`PersistentStorage` database. When synchronous behaviour is required,
+`ChaskiStreamerSync` exposes the same API from a background thread.
 
 ### Chaski Remote
 
@@ -97,6 +120,8 @@ The Chaski-Remote class enhances the Chaski-Node functionality by enabling remot
 across distributed nodes. It equips nodes with the ability to communicate transparently, invoking methods and accessing
 attributes on remote objects as if they were local. This is achieved by utilizing the Proxy class, which wraps around
 the remote objects and provides a clean interface for method calls and attribute access.
+The remote node verifies module availability through a lightweight UDP check
+before the proxy is returned, ensuring that requested services are reachable.
 
 
 ## Asynchronous Communication Architecture
@@ -126,4 +151,12 @@ the data being exchanged.
 The CA in Chaski-Confluent can generate, sign, and distribute SSL certificates, providing a robust
 security layer. This ensures that all communication between nodes is encrypted and authenticated,
 significantly reducing the risk of data breaches or unauthorized access.
+
+## Celery Transport and CLI Utilities
+
+Chaski includes a custom Kombu transport so it can be used as a Celery broker.
+The `ChaskiChannel` class relies on `ChaskiStreamerSync` to publish and consume
+tasks through the topic ``celery_tasks``.  Several command line scripts under
+`chaski/scripts/` make it easy to start a streamer root, a remote proxy or a
+certificate authority from the shell.
 
