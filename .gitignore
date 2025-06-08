@@ -161,8 +161,7 @@ cython_debug/
 
 docs/build/
 
-*.wpu
-*.wpr
+.idea/
 _sandbox/
 _notebooks/
 test/testdir/
@@ -170,3 +169,5 @@ test/testdir/
 test/ssl_certificates_location/
 test/tmp_certs_ca/
 test/certs_ca/
+test/tmp_certs_ca/
+test/file_transfer/output/
