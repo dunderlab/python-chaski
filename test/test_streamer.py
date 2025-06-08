@@ -1,16 +1,53 @@
-import subprocess
-import pytest
-import pytest_asyncio
-import asyncio
-import time
+"""
+==================================
+ChaskiStreamer Testing Module
+==================================
+
+This module contains comprehensive test cases for the ChaskiStreamer class,
+which implements communication and file transfer capabilities in the Chaski system.
+The tests validate core functionalities such as:
+
+- Basic message streaming between nodes
+- File transfer capabilities with integrity verification
+- Disabled file transfer behavior
+- Chained streaming across multiple nodes
+- Integration with root node for centralized communication
+
+The test suite uses pytest-asyncio for asynchronous test execution and includes
+fixtures for setup and teardown of streamer instances and root processes.
+"""
+
 import os
 import sys
+import time
+import asyncio
+import subprocess
+from typing import List, Any
+
+import pytest
+import pytest_asyncio
+
 from chaski.streamer import ChaskiStreamer
 from chaski.utils.auto import run_transmission
 
 
 @pytest.fixture(scope="class")
-def setup_streamer_root(request):
+def setup_streamer_root(request: pytest.FixtureRequest) -> None:
+    """
+    Fixture to set up and manage a streamer root process for the test class.
+
+    This fixture:
+    1. Starts a subprocess running the streamer_root.py script
+    2. Configures the environment to include the project path
+    3. Ensures the process is properly terminated after tests complete
+    4. Verifies the process starts correctly and doesn't crash
+
+    Args:
+        request: The pytest fixture request object to access the test class
+
+    Raises:
+        RuntimeError: If the streamer_root.py process crashes on startup
+    """
     path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     env = os.environ.copy()
     env["PYTHONPATH"] = ":".join(sys.path + [path])
@@ -46,16 +83,38 @@ def setup_streamer_root(request):
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_streamer_root")
 class TestStreamer:
+    """
+    Test suite for ChaskiStreamer functionality.
 
-    nodes = []
+    This class contains test cases for validating the various features of
+    the ChaskiStreamer class, including messaging, file transfers, and
+    node chaining. It uses the setup_streamer_root fixture to ensure
+    a root streamer process is available for tests that require it.
+    """
+
+    nodes: List[ChaskiStreamer] = []
 
     @pytest_asyncio.fixture(autouse=True)
-    async def cleanup(self):
+    async def cleanup(self) -> None:
+        """
+        Fixture to clean up streamer nodes after each test.
+
+        This fixture ensures all streamer nodes created during a test
+        are properly stopped, preventing resource leaks between tests.
+        """
         yield
         for node in self.nodes:
             await node.stop()
 
-    async def test_stream(self):
+    async def test_stream(self) -> None:
+        """
+        Test basic streaming functionality between producer and consumer.
+
+        This test:
+        1. Creates producer and consumer streamers with matching subscriptions
+        2. Runs a standard transmission between them using the run_transmission utility
+        3. Verifies the communication works properly
+        """
         producer = ChaskiStreamer(
             name="Producer",
             subscriptions=["topic1"],
@@ -70,8 +129,35 @@ class TestStreamer:
 
         await run_transmission(producer, consumer, parent=self)
 
-    async def test_file_transfer(self):
-        def new_file_event(**kwargs):
+    async def test_file_transfer(self) -> None:
+        """
+        Test file transfer capabilities between ChaskiStreamer instances.
+
+        This test:
+        1. Creates producer and consumer with file handling capabilities
+        2. Transfers files of various sizes (1KB to 10MB)
+        3. Verifies file integrity by checking size and hash
+        4. Ensures files are properly received and saved
+
+        The test uses a callback to validate each received file matches
+        its expected size and hash.
+        """
+
+        def new_file_event(**kwargs: Any) -> None:
+            """
+            Callback to verify received file integrity.
+
+            Args:
+                **kwargs: Dictionary containing file metadata including:
+                    - data: Custom data sent with the file
+                    - size: File size in bytes
+                    - filename: Name of the received file
+                    - destination_folder: Folder where file was saved
+                    - hash: Expected file hash
+
+            Raises:
+                AssertionError: If file size or hash doesn't match expectations
+            """
             size = kwargs["data"]["size"]
             assert (
                 size == kwargs["size"]
@@ -134,7 +220,19 @@ class TestStreamer:
         await consumer.stop()
         await producer.stop()
 
-    async def test_file_disable_transfer(self):
+    async def test_file_disable_transfer(self) -> None:
+        """
+        Test file transfer rejection when a node has file transfers disabled.
+
+        This test:
+        1. Creates a producer with file transfer enabled
+        2. Creates a consumer with file transfer disabled
+        3. Attempts to transfer a file between them
+        4. Verifies the file is not received by the consumer
+
+        The test confirms the security feature that prevents file transfers
+        when a node has explicitly disabled this capability.
+        """
         cwd = os.path.dirname(os.path.realpath(__file__))
 
         producer = ChaskiStreamer(
@@ -175,7 +273,20 @@ class TestStreamer:
         await consumer.stop()
         await producer.stop()
 
-    async def test_stream_chain(self):
+    async def test_stream_chain(self) -> None:
+        """
+        Test message propagation through a chain of connected streamers.
+
+        This test:
+        1. Creates a chain of 6 streamer instances
+        2. Connects them sequentially (0->1->2->3->4->5)
+        3. Sends messages from the first node
+        4. Verifies messages propagate through the chain to the last node
+        5. Tests bidirectional communication by triggering additional messages
+
+        The test confirms messages flow correctly through a multi-node network
+        and validates the streaming context manager pattern.
+        """
         chains = [
             ChaskiStreamer(
                 name=f"Producer{i}",
@@ -208,7 +319,19 @@ class TestStreamer:
         for chain in chains:
             await chain.stop()
 
-    async def test_root_node(self):
+    async def test_root_node(self) -> None:
+        """
+        Test integration with a root node for centralized communication.
+
+        This test:
+        1. Creates a root node and two regular streamers
+        2. Connects the regular streamers to the root node
+        3. Tests message propagation between streamers via the root
+        4. Verifies the root can also publish messages to subscribed nodes
+
+        The test confirms the root node properly routes messages to appropriate
+        subscribers and that the system functions in a centralized topology.
+        """
         chain0 = ChaskiStreamer(
             name="Producer 1",
             root=True,

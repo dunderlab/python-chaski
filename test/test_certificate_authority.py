@@ -1,39 +1,57 @@
 """
-=============================================
-Pytest tests for the CertificateAuthority class
-=============================================
+==========================================================
+Certificate Authority Security Infrastructure Test Suite
+==========================================================
 
-These tests ensure the correct functionality of the CertificateAuthority,
-including the creation of certificate authority (CA) certificates, private keys,
-certificate signing requests (CSRs), and the signing of CSRs.
+This module provides a comprehensive test suite for validating the functionality
+of the CertificateAuthority class within the Chaski communication framework.
+It tests the complete PKI (Public Key Infrastructure) workflow including:
 
-Dependencies:
-- os
-- pytest
-- ipaddress
-- cryptography (x509, default_backend, padding, hashes, serialization)
-- chaski.utils.certificate_authority (CertificateAuthority)
+1. Creation and verification of Certificate Authority (CA) certificates
+2. Generation of private keys for clients and servers
+3. Creation of Certificate Signing Requests (CSRs)
+4. Signing of CSRs by the CA
+5. Verification of certificate signatures
+6. Integration with the Chaski network communication system
+
+The tests ensure secure and reliable TLS/SSL communication can be established
+between Chaski nodes by verifying the cryptographic operations and certificate
+management functions work correctly.
 """
 
 import os
-import pytest
-import ipaddress
-import subprocess
 import sys
 import time
+import ipaddress
+import subprocess
+
+import pytest
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.x509.base import Certificate, CertificateSigningRequest
 
-from chaski.utils.certificate_authority import CertificateAuthority
-from chaski.utils.auto import run_transmission
 from chaski.streamer import ChaskiStreamer
+from chaski.utils.auto import run_transmission
+from chaski.utils.certificate_authority import CertificateAuthority
 
 
 @pytest.fixture(scope="class")
-def setup_ca(request):
+def setup_ca(request: pytest.FixtureRequest) -> None:
+    """
+    Setup a Certificate Authority server process for testing.
+
+    This fixture starts the Certificate Authority server script as a separate process
+    and ensures it's available for the duration of the test suite. The server provides
+    certificate services for the tests, including certificate signing and validation.
+
+    Args:
+        request: The pytest fixture request object
+
+    Returns:
+        None
+    """
     path = os.path.abspath(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     env = os.environ.copy()
     env["PYTHONPATH"] = ":".join(sys.path + [path])
@@ -45,45 +63,50 @@ def setup_ca(request):
         text=True,
         env=env,
     )
-    time.sleep(1)
+    time.sleep(1)  # Allow time for the CA server to start
 
 
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("setup_ca")
 class TestCertificateAuthority:
-    """Test suite for the CertificateAuthority class using pytest."""
+    """
+    Test suite for the CertificateAuthority class functionality.
+
+    This class contains test cases for validating the security infrastructure provided
+    by the CertificateAuthority class, including certificate creation, signing,
+    verification, and secure communication establishment.
+
+    Attributes:
+        SSL_CERTIFICATES_LOCATION: Directory where test certificates will be stored
+        TEST_NAME: Identifier used for naming test certificates
+    """
 
     # Class-level constants
-    SSL_CERTIFICATES_LOCATION = "ssl_certificates_location"
-    TEST_NAME = "Test-ID"
-    # TEST_NAME = "3ea4e610-f276-4715-aa52-88d1cf14a295"
-    # TEST_NAME = "4c535672-949e-480f-9df4-9548a4cc2c1f"
+    SSL_CERTIFICATES_LOCATION: str = "ssl_certificates_location"
+    TEST_NAME: str = "Test-ID"
 
     @classmethod
-    def setup_class(cls):
-        """Set up the class for the Certificate Authority tests.
+    def setup_class(cls) -> None:
+        """
+        Set up the test environment for Certificate Authority tests.
 
-        This method is a class-level setup method that prepares the
-        environment for testing the Certificate Authority (CA). It
-        creates a directory for storing SSL certificates if it does
-        not already exist.
+        Creates a directory for storing SSL certificates if it doesn't already exist.
+        This method runs once before any test in the class is executed.
         """
         if not os.path.exists(cls.SSL_CERTIFICATES_LOCATION):
             os.mkdir(cls.SSL_CERTIFICATES_LOCATION)
 
     @pytest.fixture
-    def certificate_authority(self):
-        """Create and return a CertificateAuthority instance.
+    def certificate_authority(self) -> CertificateAuthority:
+        """
+        Create and configure a CertificateAuthority instance for testing.
 
-        This fixture instantiates a CertificateAuthority object with preset
-        configurations for testing purposes. The attributes include an ID,
-        an IP address, the SSL certificates location, and SSL certificate
-        attributes like the country, locality, organization, state, and common name.
+        This fixture instantiates a CertificateAuthority object with predefined
+        configurations suitable for testing purposes, including identification,
+        network address, certificate storage location, and certificate attributes.
 
-        Returns
-        -------
-        CertificateAuthority
-            An instance of CertificateAuthority configured for testing.
+        Returns:
+            CertificateAuthority: A configured instance ready for testing
         """
         ca = CertificateAuthority(
             self.TEST_NAME,
@@ -100,29 +123,36 @@ class TestCertificateAuthority:
         return ca
 
     @pytest.mark.asyncio
-    async def test_ca(self, certificate_authority):
-        """Test the creation of CA certificate and private key.
+    async def test_ca(self, certificate_authority: CertificateAuthority) -> None:
+        """
+        Test the creation and validation of CA certificate and private key.
 
-        This test verifies the functionality of the `setup_certificate_authority` method
-        in the `CertificateAuthority` class. It ensures that the CA certificate and private key
-        are generated and saved correctly. Additionally, it performs a validation to check
-        if the private key corresponds to the generated certificate by signing and verifying a message.
+        This test verifies that the CertificateAuthority can correctly generate
+        a Certificate Authority certificate and private key pair, save them to the
+        specified location, and use them for cryptographic operations. It validates
+        the key pair by signing and verifying a test message.
+
+        Args:
+            certificate_authority: The CertificateAuthority fixture instance
+
+        Raises:
+            AssertionError: If certificate paths don't exist or key verification fails
         """
         ca = certificate_authority
         ca.setup_certificate_authority()
 
         assert os.path.exists(
             ca.ca_certificate_path
-        ), "ca_certificate_path does not exist"
+        ), "CA certificate path does not exist"
         assert os.path.exists(
             ca.ca_private_key_path
-        ), "ca_private_key_path does not exist"
+        ), "CA private key path does not exist"
 
-        certificate = x509.load_pem_x509_certificate(
+        certificate: Certificate = x509.load_pem_x509_certificate(
             ca.load_certificate(ca.ca_certificate_path), default_backend()
         )
 
-        private_key = serialization.load_pem_private_key(
+        private_key: rsa.RSAPrivateKey = serialization.load_pem_private_key(
             ca.load_certificate(ca.ca_private_key_path),
             password=None,
             backend=default_backend(),
@@ -141,31 +171,42 @@ class TestCertificateAuthority:
             )
 
     @pytest.mark.asyncio
-    async def test_csr(self, certificate_authority):
-        """Test the generation of private keys and CSRs.
+    async def test_csr(self, certificate_authority: CertificateAuthority) -> None:
+        """
+        Test the generation of private keys and Certificate Signing Requests.
 
-        This test verifies the functionality of the `generate_key_and_csr` method
-        in the `CertificateAuthority` class. It ensures that both client and server
-        private keys and certificate signing requests (CSRs) are generated and saved correctly.
-        It also verifies that the moduli of the private keys match those of the corresponding CSRs.
+        This test verifies that the CertificateAuthority can correctly generate
+        private keys and corresponding Certificate Signing Requests (CSRs) for
+        both client and server entities. It validates that the generated keys and
+        CSRs have matching cryptographic properties (moduli).
+
+        Args:
+            certificate_authority: The CertificateAuthority fixture instance
+
+        Raises:
+            AssertionError: If files don't exist or moduli don't match
         """
         ca = certificate_authority
         ca.generate_key_and_csr()
 
-        assert os.path.exists(ca.private_key_paths["client"])
-        assert os.path.exists(ca.private_key_paths["server"])
-        assert os.path.exists(ca.certificate_paths["client"])
-        assert os.path.exists(ca.certificate_paths["server"])
+        assert os.path.exists(ca.private_key_paths["client"]), "Client key not found"
+        assert os.path.exists(ca.private_key_paths["server"]), "Server key not found"
+        assert os.path.exists(ca.certificate_paths["client"]), "Client CSR not found"
+        assert os.path.exists(ca.certificate_paths["server"]), "Server CSR not found"
 
         def key_modulus(key: bytes) -> int:
-            private_key = serialization.load_pem_private_key(
+            """Extract modulus from a private key."""
+            private_key: rsa.RSAPrivateKey = serialization.load_pem_private_key(
                 key, password=None, backend=default_backend()
             )
             modulus = private_key.private_numbers().public_numbers.n
             return modulus
 
         def csr_modulus(key: bytes) -> int:
-            csr = x509.load_pem_x509_csr(key, backend=default_backend())
+            """Extract modulus from a Certificate Signing Request."""
+            csr: CertificateSigningRequest = x509.load_pem_x509_csr(
+                key, backend=default_backend()
+            )
             public_key = csr.public_key()
             modulus = public_key.public_numbers()
             return modulus.n
@@ -191,14 +232,21 @@ class TestCertificateAuthority:
         ), "Server key modulus does not match Server CSR modulus"
 
     @pytest.mark.asyncio
-    async def test_sign(self, certificate_authority):
-        """Test signing of client and server CSRs by the CA.
+    async def test_sign(self, certificate_authority: CertificateAuthority) -> None:
+        """
+        Test the signing of Certificate Signing Requests by the CA.
 
-        This test verifies the functionality of the `sign_csr` method
-        in the `CertificateAuthority` class. It ensures that the client and server
-        certificate signing requests (CSRs) are signed correctly by the CA.
-        After signing the CSRs, it checks that the signatures on the resulting
-        certificates are valid and were created by the CA's private key.
+        This test verifies that the CertificateAuthority can correctly sign
+        Certificate Signing Requests (CSRs) and generate valid certificates.
+        It loads the CA certificate and private key, then signs client and server
+        CSRs, and finally verifies that the resulting certificates have valid
+        signatures from the CA.
+
+        Args:
+            certificate_authority: The CertificateAuthority fixture instance
+
+        Raises:
+            AssertionError: If certificates aren't properly signed by the CA
         """
         ca = certificate_authority
 
@@ -228,16 +276,16 @@ class TestCertificateAuthority:
         with open(ca.certificate_signed_paths["server"], "wb") as file:
             file.write(ca.sign_csr(ca.load_certificate(ca.certificate_paths["server"])))
 
-        ca_cert = x509.load_pem_x509_certificate(
+        ca_cert: Certificate = x509.load_pem_x509_certificate(
             ca.load_certificate(ca.ca_certificate_path), default_backend()
         )
         ca_public_key = ca_cert.public_key()
 
-        client_cert = x509.load_pem_x509_certificate(
+        client_cert: Certificate = x509.load_pem_x509_certificate(
             ca.load_certificate(ca.certificate_signed_paths["client"]),
             default_backend(),
         )
-        server_cert = x509.load_pem_x509_certificate(
+        server_cert: Certificate = x509.load_pem_x509_certificate(
             ca.load_certificate(ca.certificate_signed_paths["server"]),
             default_backend(),
         )
@@ -263,19 +311,17 @@ class TestCertificateAuthority:
             pytest.fail(f"The server certificate was NOT signed by the CA: {str(e)}")
 
     @pytest.mark.asyncio
-    async def test_ssl_certificate_CA(self):
+    async def test_ssl_certificate_CA(self) -> None:
         """
-        Test requesting SSL certificates from the Certificate Authority (CA).
+        Test end-to-end certificate request and secure transmission flow.
 
-        This test method validates the process of requesting and obtaining
-        SSL/TLS certificates from a Certificate Authority for both producer
-        and consumer nodes. The steps include:
+        This test validates the complete process of requesting certificates from
+        the Certificate Authority and using them for secure communication between
+        Chaski nodes. It creates producer and consumer nodes, requests certificates
+        for both, and then performs a secure data transmission between them.
 
-        1. Initialize a ChaskiStreamer instance for the producer with the CA's address.
-        2. Initialize a ChaskiStreamer instance for the consumer with the CA's address.
-        3. Request SSL certificates for both producer and consumer from the CA.
-        4. Run a secure transmission between producer and consumer to validate the
-           successful acquisition and usage of the SSL certificates.
+        Raises:
+            AssertionError: If certificate requests fail or secure transmission fails
         """
         producer = ChaskiStreamer(
             port=65443,
@@ -300,5 +346,5 @@ class TestCertificateAuthority:
             os.getenv("CHASKI_CERTIFICATE_AUTHORITY", "ChaskiCA@127.0.0.1:65432")
         )
 
-        # Ahora podemos usar self como parent (disponible en clase)
+        # Use this test instance as parent for the transmission test
         await run_transmission(producer, consumer, parent=self)

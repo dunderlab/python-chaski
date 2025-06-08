@@ -1,128 +1,48 @@
 """
-=========================
-Test Subscriptions Module
-=========================
+======================================
+Test Subscriptions Between ChaskiNodes
+======================================
 
-This module contains pytest tests designed to assert and validate
-the connection functionalities of ChaskiNode instances based on their subscription topics.
-The tests are structured to ensure that nodes with matching subscriptions establish
-connections correctly and can communicate effectively.
-
-Functions
----------
-- assert_connection(node1, node2, msg) : Assert that two ChaskiNode instances are connected.
-- assert_no_connection(node1, node2, msg) : Assert that two ChaskiNode instances are not connected.
-- test_single_subscription_no_disconnect() : Test single subscription connections between ChaskiNodes without disconnecting other nodes.
-- test_single_subscription_with_disconnect() : Test single subscription connections between ChaskiNodes with node disconnection during pairing.
+This file contains asynchronous pytest test cases for validating subscription-based
+connection logic among ChaskiNode instances. The test suite checks that nodes with
+overlapping subscription topics establish connections correctly and that
+disconnections occur as expected when specified by the test logic.
 """
 
-import pytest
-import pytest_asyncio
 import asyncio
-from typing import Optional
+from typing import List
+
+import pytest
+
 from chaski.utils.auto import create_nodes
 from chaski.node import ChaskiNode
+from .test_base import TestBase
 
 
 @pytest.mark.asyncio
-class TestSubscriptions:
+class TestSubscriptions(TestBase):
     """
-    Test case for testing a single subscription scenario in ChaskiNodes.
+    Test case container for validating subscription-driven connection logic in ChaskiNodes.
 
-    This test case defines the infrastructure to create multiple ChaskiNode instances
-    and validate the correct establishment of connections based on their subscription topics.
+    This class includes tests for both persistent and disconnect-on-pair behaviors when
+    matching nodes are discovered based on their subscription topics.
     """
 
-    nodes = []
-    host = "127.0.0.1"
+    nodes: List[ChaskiNode] = []
+    host: str = "127.0.0.1"
 
-    @pytest_asyncio.fixture(autouse=True)
-    async def cleanup(self):
-        """Cleanup fixture to stop all nodes after each test"""
-        yield
-        for node in self.nodes:
-            print(f"Closing node {node.port}")
-            await node.stop()
-        await asyncio.sleep(1)
-
-    def assert_connection(
-        self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
-    ):
+    async def test_single_subscription_no_disconnect(self) -> None:
         """
-        Assert that two ChaskiNodes are connected to each other.
+        Validate connections between ChaskiNodes for single-topic subscriptions without disconnects.
 
-        This method checks if `node1` is connected to `node2` and vice versa.
-        It raises an assertion error if the connection is not established in
-        both directions.
+        The test procedure is as follows:
+            1. Create nodes with subscriptions ['A', 'B', 'C', 'A', 'B', 'C'].
+            2. Connect each non-initial node to the first node.
+            3. Invoke peer discovery without disconnecting after pairing.
+            4. Assert correct node-to-node connections for each shared topic.
 
-        Parameters
-        ----------
-        node1 : ChaskiNode
-                The first ChaskiNode to check connection from.
-        node2 : ChaskiNode
-                The second ChaskiNode to check connection to.
-        msg : str, optional
-                An optional message to include in the assertion error if the
-                nodes are not connected.
-
-        Raises
-        ------
-        AssertionError
-                If `node1` is not connected to `node2` or `node2` is not connected to `node1`.
-        """
-        conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
-        if not conn and msg is not None:
-            pytest.fail(msg)
-        assert conn
-
-    def assert_no_connection(
-        self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
-    ):
-        """
-        Assert that two ChaskiNodes are not connected to each other.
-
-        This method checks if `node1` is connected to `node2` and vice versa.
-        It raises an assertion error if the connection is established in
-        either direction.
-
-        Parameters
-        ----------
-        node1 : ChaskiNode
-                The first ChaskiNode to check connection from.
-        node2 : ChaskiNode
-                The second ChaskiNode to check connection to.
-        msg : str, optional
-                An optional message to include in the assertion error if the
-                nodes are connected.
-
-        Raises
-        ------
-        AssertionError
-                If `node1` is connected to `node2` or `node2` is connected to `node1`.
-        """
-        conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
-        if conn and msg is not None:
-            pytest.fail(msg)
-        assert not conn
-
-    async def test_single_subscription_no_disconnect(self):
-        """
-        Test single subscription connections between ChaskiNodes without disconnecting other nodes.
-
-        This test method performs the following steps to ensure nodes with matching subscriptions
-        connect correctly:
-
-        1. Create nodes with designated subscriptions: ['A', 'B', 'C', 'A', 'B', 'C'].
-        2. Initiate connections from each subsequent node to the first node.
-        3. Trigger a discovery phase to find and pair peers based on subscriptions.
-        4. Immediately disconnect nodes after they are paired.
-        5. Validate if nodes are connected based on their subscription topics.
-        6. Close all node instances upon completion.
-
-        Assertions
-        ----------
-        AssertionError
-            Raised if the nodes do not pair correctly according to their subscription topics.
+        Raises:
+            AssertionError: If expected connections are not established based on topic matches.
         """
         self.nodes = await create_nodes(["A", "B", "C", "A", "B", "C"], port=65440)
         for node in self.nodes[1:]:
@@ -149,24 +69,18 @@ class TestSubscriptions:
             "Node 2 should be connected to Node 5 because both nodes are subscribed to the topic 'C'.",
         )
 
-    async def test_single_subscription_with_disconnect(self):
+    async def test_single_subscription_with_disconnect(self) -> None:
         """
-        Test single subscription connections between ChaskiNodes with node disconnection during pairing.
+        Validate connections and required disconnections for multi-topic subscriptions.
 
-        This test method performs the following steps to ensure nodes with matching subscriptions
-        connect correctly and disconnect from the discovery node:
+        The test procedure is as follows:
+            1. Create nodes with subscriptions ['A', 'B', 'C', ['A', 'C'], ['B', 'A'], 'C'].
+            2. Connect each non-initial node to the first node.
+            3. Perform discovery with disconnects on peer pairing.
+            4. Assert connection establishment and lack thereof for various node pairs.
 
-        1. Create nodes with designated subscriptions: ['A', 'B', 'C', ['A', 'C'], ['B', 'A'], 'C'].
-        2. Initiate connections from each subsequent node to the first node.
-        3. Trigger a discovery phase to find and pair peers based on subscriptions.
-        4. Disconnect from the discovery node after nodes are paired.
-        5. Validate if nodes are connected based on their subscription topics.
-        6. Close all node instances upon completion.
-
-        Assertions
-        ----------
-        AssertionError
-            Raised if the nodes do not pair correctly according to their subscription topics.
+        Raises:
+            AssertionError: If actual connections differ from those specified by topic criteria.
         """
         self.nodes = await create_nodes(
             ["A", "B", "C", ["A", "C"], ["B", "A"], "C"], port=65450

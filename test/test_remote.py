@@ -5,19 +5,16 @@ TestRemote: Pytest Tests for `ChaskiRemote` Class Functionality
 
 This module contains pytest tests for the `ChaskiRemote` class, which is part of the Chaski framework
 for distributed systems.
-
-Classes
--------
-TestRemote
-    A test class for testing the `ChaskiRemote` class functionality.
 """
 
-import pytest
-import pytest_asyncio
 import os
 import asyncio
-from chaski.remote import ChaskiRemote
+
+import pytest
 import numpy as np
+import pytest_asyncio
+
+from chaski.remote import ChaskiRemote
 
 
 @pytest.mark.asyncio
@@ -60,14 +57,12 @@ class TestRemote:
             if the connection steps fail.
         """
         server = ChaskiRemote(
-            # port=65440,
             available=[],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
 
         client = ChaskiRemote(
-            # port=65441,
             reconnections=None,
         )
         await client.connect(server.address)
@@ -103,14 +98,12 @@ class TestRemote:
             if any exceptions are encountered during the test steps.
         """
         server = ChaskiRemote(
-            # port=65434,
             available=["os"],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
 
         client = ChaskiRemote(
-            # port=65435,
             reconnections=None,
         )
         await client.connect(server.address)
@@ -139,14 +132,12 @@ class TestRemote:
         4. Verify each call returns the expected results.
         """
         server = ChaskiRemote(
-            # port=65434,
             available=["os"],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
 
         client = ChaskiRemote(
-            # port=65435,
             reconnections=None,
         )
         await client.connect(server.address)
@@ -177,14 +168,12 @@ class TestRemote:
         4. Verify the return values match expectations.
         """
         server = ChaskiRemote(
-            # port=65434,
             available=["numpy"],
             reconnections=None,
         )
         await asyncio.sleep(0.3)
 
         client = ChaskiRemote(
-            # port=65435,
             reconnections=None,
         )
         await client.connect(server.address)

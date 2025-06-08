@@ -1,95 +1,67 @@
 """
-===========================
-Chaski Test Node Connection
-===========================
+=================================================
+Chaski Network Connection Testing Framework
+=================================================
 
-This module provides test cases for verifying the connection-related
-functionality of ChaskiNode instances within a distributed network.
-It includes test classes and utility methods that ensure nodes can
-establish, maintain, and disconnect peer-to-peer connections effectively.
+This module provides a comprehensive test suite for validating the connection
+capabilities of ChaskiNode instances within a distributed peer-to-peer network.
+The tests verify critical aspects of network operation including:
 
-Classes
--------
-TestConnections:
-    Base class containing utility methods and asynchronous test methods
-    to verify connections between ChaskiNode instances.
+- Establishing and maintaining peer-to-peer connections
+- Managing multiple simultaneous connections
+- Graceful handling of disconnection events
+- Detection and cleanup of orphaned connections
+- Network reliability under various connection patterns
+- Protocol-specific behavior (IPv4 and IPv6)
+- UDP communication between nodes
 
-Test_Connections_for_IPv4:
-    Derived class that extends TestConnections for testing IPv4 connections
-    specifically.
-
-Test_Connections_for_IPv6:
-    Derived class that extends TestConnections for testing IPv6 connections
-    specifically.
+These tests ensure that ChaskiNodes can reliably form resilient network topologies,
+maintain connections appropriately, and recover from various network disruptions.
 """
+
+from typing import List, Dict
 
 import pytest
 import pytest_asyncio
-import asyncio
-from chaski.utils.auto import create_nodes
-from typing import Optional
+
 from chaski.node import ChaskiNode
+from chaski.utils.auto import create_nodes
+from .test_base import TestBase
 
 
-class _TestConnections:
+@pytest.mark.asyncio
+class _TestConnections(TestBase):
     """
     Base class for testing connection-related functionality between ChaskiNode instances.
 
-    This class provides utility methods and asynchronous test methods to verify the
-    ability of ChaskiNodes to establish, maintain, and disconnect peer-to-peer
-    connections. Derived classes can utilize these tests to validate specific
-    communication protocols, such as IPv4 and IPv6.
+    This abstract class provides test methods for validating that ChaskiNodes can
+    properly establish, maintain, and terminate connections under various network
+    conditions. The tests verify both normal operation and edge cases such as
+    disconnections and orphaned connections.
+
+    This class is not meant to be instantiated directly; instead, concrete subclasses
+    should be created that specify the IP address format to test (IPv4 or IPv6).
     """
 
-    def assert_connection(
-        self, node1: ChaskiNode, node2: ChaskiNode, msg: Optional[str] = None
-    ):
-        """
-        Assert that two ChaskiNodes are connected to each other.
-
-        This method checks if `node1` is connected to `node2` and vice versa.
-        It raises an assertion error if the connection is not established in
-        both directions.
-
-        Parameters
-        ----------
-        node1 : ChaskiNode
-            The first ChaskiNode to check connection from.
-        node2 : ChaskiNode
-            The second ChaskiNode to check connection to.
-        msg : str, optional
-            An optional message to include in the assertion error if the
-            nodes are not connected.
-
-        Raises
-        ------
-        AssertionError
-            If `node1` is not connected to `node2` or `node2` is not connected to `node1`.
-        """
-        conn = node1.is_connected_to(node2) and node2.is_connected_to(node1)
-        if not conn and msg is not None:
-            pytest.fail(msg)
-        assert conn
+    # ip attribute will be defined in subclasses
+    ip: str
 
     @pytest.mark.asyncio
-    async def test_single_connections(self):
+    async def test_single_connections(self) -> None:
         """
-        Test single connections between ChaskiNodes.
+        Validate basic one-to-one connections between ChaskiNodes.
 
-        This asynchronous method tests the ability of ChaskiNode instances to
-        establish individual peer-to-peer connections.
+        This test verifies that nodes can establish simple point-to-point
+        connections and properly maintain their connection states.
 
-        Steps:
-        1. Create 4 nodes.
-        2. Connect Node 0 to Node 1 and Node 2 to Node 3.
-        3. Verify that each node has established 1 connection.
-        4. Close all nodes.
-        5. Repeat steps 1-4 to ensure consistency.
+        Test procedure:
+        1. Create 4 ChaskiNode instances
+        2. Connect Node 0 to Node 1 and Node 2 to Node 3
+        3. Wait for connections to stabilize
+        4. Verify each node has exactly one active connection
 
-        Raises
-        ------
-        AssertionError
-            If any node fails to establish the expected number of connections.
+        Raises:
+            AssertionError: If any node fails to establish exactly one connection
         """
         self.nodes = await create_nodes(4, self.ip)
         await self.nodes[0].connect(self.nodes[1])
@@ -101,25 +73,22 @@ class _TestConnections:
             assert len(node.edges) == 1, f"Node {i} connection failed"
 
     @pytest.mark.asyncio
-    async def test_multiple_connections(self):
+    async def test_multiple_connections(self) -> None:
         """
-        Test multiple connections to a single ChaskiNode.
+        Validate a central node handling multiple simultaneous connections.
 
-        This asynchronous method tests the ability of a single ChaskiNode to
-        handle multiple peer-to-peer connections simultaneously.
+        This test verifies that a single ChaskiNode can successfully manage
+        multiple concurrent connections with other nodes in the network.
 
-        Steps:
-        1. Create 5 nodes.
-        2. Connect Node 1, Node 2, Node 3, and Node 4 to Node 0.
-        3. Verify that Nodes 1-4 each have 1 connection.
-        4. Verify that Node 0 has 4 connections.
-        5. Close all nodes.
-        6. Repeat steps 1-5 to ensure consistency.
+        Test procedure:
+        1. Create 5 ChaskiNode instances
+        2. Connect Nodes 1-4 to Node 0 (creating a star topology)
+        3. Wait for connections to stabilize
+        4. Verify that Nodes 1-4 each have exactly one connection
+        5. Verify that Node 0 has exactly four connections
 
-        Raises
-        ------
-        AssertionError
-            If any node fails to establish the expected number of connections.
+        Raises:
+            AssertionError: If any node fails to establish the expected number of connections
         """
         self.nodes = await create_nodes(5, self.ip)
         for node in self.nodes[1:]:
@@ -135,26 +104,23 @@ class _TestConnections:
         ), f"Node 0 failed to establish all connections"
 
     @pytest.mark.asyncio
-    async def test_disconnection(self):
+    async def test_disconnection(self) -> None:
         """
-        Test disconnection of nodes.
+        Validate network behavior when a central node disconnects.
 
-        This method tests the ability of nodes to handle disconnection events.
-        It establishes connections between nodes, stops one node, and verifies
-        if all nodes properly reflect the disconnection.
+        This test verifies that when a node with multiple connections is stopped,
+        all connected nodes properly detect the disconnection and update their
+        connection states accordingly.
 
-        Steps:
-        1. Create 5 nodes.
-        2. Connect Node 1, Node 2, Node 3, and Node 4 to Node 0.
-        3. Stop Node 0.
-        4. Verify that Node 0 and Nodes 1-4 have no active connections.
-        5. Close all nodes.
+        Test procedure:
+        1. Create 5 ChaskiNode instances
+        2. Connect Nodes 1-4 to Node 0 (creating a star topology)
+        3. Wait for connections to stabilize
+        4. Stop Node 0
+        5. Verify that all nodes have zero active connections
 
-        Raises
-        ------
-        AssertionError
-            If any node fails to properly disconnect or maintain the expected
-            state after disconnection.
+        Raises:
+            AssertionError: If any node fails to properly detect the disconnection
         """
         self.nodes = await create_nodes(5, self.ip)
         for node in self.nodes[1:]:
@@ -171,27 +137,25 @@ class _TestConnections:
             assert len(node.edges) == 0, f"Node {i} not disconnected"
 
     @pytest.mark.asyncio
-    async def test_edges_disconnection(self):
+    async def test_edges_disconnection(self) -> None:
         """
-        Test progressive disconnection of nodes from edge nodes.
+        Validate selective edge disconnection in a complex network topology.
 
-        This method is designed to evaluate the behavior and stability of ChaskiNodes
-        when edge nodes selectively disconnect from the network. It ensures the nodes
-        handle partial disconnections without compromising the remaining connections.
+        This test verifies that nodes can handle selective disconnection of
+        specific edges while maintaining other connections. It creates a network
+        where nodes are connected to two central nodes, then disconnects edges
+        from one central node while verifying the other connections remain intact.
 
-        Steps:
-        1. Create 6 nodes.
-        2. Connect Node 1 through Node 4 to Node 0.
-        3. Connect Node 1 through Node 4 to Node 5.
-        4. Sequentially disconnect Node 0's connections.
-        5. Verify the connection count after each disconnection.
-        6. Verify that Node 1 through Node 4 remain connected to Node 5.
-        7. Close all nodes.
+        Test procedure:
+        1. Create 6 ChaskiNode instances
+        2. Connect Nodes 1-5 to Node 0
+        3. Connect Nodes 0-4 to Node 5 (creating a dual-centered topology)
+        4. Sequentially disconnect Node 0's connections one by one
+        5. Verify connection counts after each disconnection
+        6. Verify that Nodes 1-4 remain connected to Node 5
 
-        Raises
-        ------
-        AssertionError
-            If any node fails to properly manage connections or disconnections.
+        Raises:
+            AssertionError: If connections are not properly maintained or terminated
         """
         self.nodes = await create_nodes(6, self.ip)
 
@@ -218,28 +182,27 @@ class _TestConnections:
         for i in range(1, 5):
             assert len(self.nodes[i].edges) == 1, f"Node {i} connections failed"
 
-        assert len(self.nodes[5].edges) == 4, "Node 6 connections failed"
+        assert len(self.nodes[5].edges) == 4, "Node 5 connections failed"
 
     @pytest.mark.asyncio
-    async def test_edges_client_orphan(self):
+    async def test_edges_client_orphan(self) -> None:
         """
-        Test when client-edge nodes become orphaned.
+        Validate handling of orphaned client connections.
 
-        This method assesses how the system handles the scenario where edge nodes acting as clients
-        get disconnected and consequently become orphans.
+        This test verifies that when client nodes initiate disconnection,
+        both the client and server sides properly update their connection states
+        and handle the orphaned connection scenario correctly.
 
-        Steps:
-        1. Create 5 nodes.
-        2. Connect Node 1 through Node 4 to Node 0.
-        3. Verify initial connections.
-        4. Close client connections.
-        5. Verify connection states after disconnection.
-        6. Close all nodes.
+        Test procedure:
+        1. Create 5 ChaskiNode instances
+        2. Connect Nodes 1-4 to Node 0 (clients connecting to server)
+        3. Verify initial connection states
+        4. Have each client node close its connection to the server
+        5. Verify all nodes detect the disconnections
 
-        Raises
-        ------
-        AssertionError
-            If the connection management does not reflect expected states after disconnections.
+        Raises:
+            AssertionError: If any node fails to properly handle the disconnection
+                           or if orphaned connections remain
         """
         self.nodes = await create_nodes(5, self.ip)
 
@@ -264,26 +227,24 @@ class _TestConnections:
             ), f"Node {i} connections failed after orphan detection"
 
     @pytest.mark.asyncio
-    async def test_edges_server_orphan(self):
+    async def test_edges_server_orphan(self) -> None:
         """
-        Test when server-edge nodes become orphaned.
+        Validate handling of orphaned server connections.
 
-        This method evaluates how the system handles scenarios where server-edge nodes get disconnected,
-        leading them to become orphans. This is crucial to ensure that nodes properly manage connections
-        and maintain expected states after disconnections.
+        This test verifies that when a server node initiates disconnection from
+        its clients, both the server and all client nodes properly update their
+        connection states and handle the orphaned connection scenario correctly.
 
-        Steps:
-        1. Create 5 nodes.
-        2. Connect Node 1 through Node 4 to Node 0.
-        3. Verify initial connections.
-        4. Close server connections.
-        5. Verify connection states after disconnection.
-        6. Close all nodes.
+        Test procedure:
+        1. Create 5 ChaskiNode instances
+        2. Connect Nodes 1-4 to Node 0 (clients connecting to server)
+        3. Verify initial connection states
+        4. Have the server node close all its connections to clients
+        5. Verify all nodes detect the disconnections
 
-        Raises
-        ------
-        AssertionError
-            If connection management does not reflect expected states after disconnections.
+        Raises:
+            AssertionError: If any node fails to properly handle the disconnection
+                           or if orphaned connections remain
         """
         self.nodes = await create_nodes(5, self.ip)
         for node in self.nodes[1:]:
@@ -307,31 +268,30 @@ class _TestConnections:
             ), f"Node {i} connections failed after orphan detection"
 
     @pytest.mark.asyncio
-    async def test_response_udp(self):
+    async def test_response_udp(self) -> None:
         """
-        Test the UDP response mechanism of ChaskiNodes.
+        Validate UDP communication between connected ChaskiNodes.
 
-        This asynchronous method checks the ability of the ChaskiNode instances
-        to handle UDP requests and provide the correct responses.
+        This test verifies that nodes can exchange UDP messages correctly,
+        with the receiving node properly processing and responding to the
+        request with identical data.
 
-        Steps:
-        1. Create 2 nodes.
-        2. Connect Node 1 to Node 0.
-        3. Send a generic UDP request from Node 0 to Node 1.
-        4. Verify the response data matches the sent data.
-        5. Close all nodes.
+        Test procedure:
+        1. Create 2 ChaskiNode instances
+        2. Connect Node 1 to Node 0
+        3. Send test data via UDP from Node 0 to Node 1
+        4. Verify the response data exactly matches the sent data
 
-        Raises
-        ------
-        AssertionError
-            If the response data does not match the sent data.
+        Raises:
+            AssertionError: If the response data differs from the sent data,
+                           indicating UDP communication problems
         """
         self.nodes = await create_nodes(2, self.ip)
         await self.nodes[1].connect(self.nodes[0])
 
         await self._wait_for_connections()
 
-        dummy_data = {
+        dummy_data: Dict[str, str] = {
             self.nodes[0].uuid(): self.nodes[0].uuid(),
             self.nodes[0].uuid(): self.nodes[0].uuid(),
             self.nodes[0].uuid(): self.nodes[0].uuid(),
@@ -343,27 +303,28 @@ class _TestConnections:
 @pytest.mark.asyncio
 class Test_Connections_for_IPv4(_TestConnections):
     """
-    Unit tests for testing connections between ChaskiNode instances using IPv4.
+    Concrete test class for validating ChaskiNode connections over IPv4.
 
-    This class extends the `TestConnections` base class and utilizes pytest-asyncio
-    for asynchronous test execution. It specifically tests connections over IPv4.
+    This class extends the abstract _TestConnections class to provide specific
+    tests for IPv4 networking. It runs all the connection tests defined in the
+    parent class using the IPv4 loopback address (127.0.0.1).
 
-    Attributes
-    ----------
-    ip : str
-        The IPv4 address used for creating and connecting nodes, set to '127.0.0.1'.
+    Attributes:
+        ip: The IPv4 loopback address used for test connections
+        nodes: List to store ChaskiNode instances created during tests
     """
 
-    ip = "127.0.0.1"
-    nodes = []
-
-    async def _wait_for_connections(self):
-        for i in range(10):
-            await asyncio.sleep(0.3)
+    ip: str = "127.0.0.1"
+    nodes: List[ChaskiNode] = []
 
     @pytest_asyncio.fixture(autouse=True)
-    async def cleanup(self):
-        """Cleanup fixture to stop all nodes after each test"""
+    async def cleanup(self) -> None:
+        """
+        Fixture to automatically clean up node resources after each test.
+
+        This fixture ensures all ChaskiNode instances created during a test are
+        properly stopped and resources released before the next test runs.
+        """
         yield
         for node in self.nodes:
             await node.stop()
@@ -373,27 +334,28 @@ class Test_Connections_for_IPv4(_TestConnections):
 @pytest.mark.asyncio
 class Test_Connections_for_IPv6(_TestConnections):
     """
-    Unit tests for testing connections between ChaskiNode instances using IPv6.
+    Concrete test class for validating ChaskiNode connections over IPv6.
 
-    This class extends the `TestConnections` base class and utilizes pytest-asyncio
-    for asynchronous test execution. It specifically tests connections over IPv6.
+    This class extends the abstract _TestConnections class to provide specific
+    tests for IPv6 networking. It runs all the connection tests defined in the
+    parent class using the IPv6 loopback address (::1).
 
-    Attributes
-    ----------
-    ip : str
-        The IPv6 address used for creating and connecting nodes, set to '::1'.
+    Attributes:
+        ip: The IPv6 loopback address used for test connections
+        nodes: List to store ChaskiNode instances created during tests
     """
 
-    ip = "::1"
-    nodes = []
-
-    async def _wait_for_connections(self):
-        for i in range(10):
-            await asyncio.sleep(0.3)
+    ip: str = "::1"
+    nodes: List[ChaskiNode] = []
 
     @pytest_asyncio.fixture(autouse=True)
-    async def cleanup(self):
-        """Cleanup fixture to stop all nodes after each test"""
+    async def cleanup(self) -> None:
+        """
+        Fixture to automatically clean up node resources after each test.
+
+        This fixture ensures all ChaskiNode instances created during a test are
+        properly stopped and resources released before the next test runs.
+        """
         yield
         for node in self.nodes:
             await node.stop()

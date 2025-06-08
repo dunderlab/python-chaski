@@ -1,69 +1,67 @@
 """
-==========================
-Test Node Functions Module
-==========================
+==================================
+Chaski Node Functions Test Module
+==================================
 
-This module contains pytest tests for validating the functionality and behavior
-of various node-related operations within the Chaski framework. The tests
-are designed to ensure the correct operation of nodes, addresses, message
-pinging, and message handling.
+This module contains comprehensive pytest test cases for validating core functionalities
+of the Chaski communication framework. The tests verify critical features including:
 
-Classes
--------
-TestFunctions
-    Contains test cases for validating node operations, including ping tests,
-    address verification, and message handling.
+- Node connectivity and message exchange
+- Message time-to-live (TTL) behavior
+- SSL/TLS certificate handling and secure communications
+- Certificate Authority (CA) integration
+- Connection latency measurement and management
+
+These tests ensure the reliability, security, and performance characteristics
+of the Chaski framework components in various operational scenarios.
 """
 
-import pytest
-import pytest_asyncio
 import os
 import ssl
 import asyncio
-from chaski.node import Message, ChaskiNode
+from typing import List, Union
+
+import pytest
+
 from chaski.streamer import ChaskiStreamer
+from chaski.node import Message, ChaskiNode
 from chaski.utils.auto import run_transmission, create_nodes
-from chaski.scripts import terminate_connections
+from .test_base import TestBase
 
 
 @pytest.mark.asyncio
-class TestFunctions:
-    """Test class for various node functions and operations in the Chaski framework."""
+class TestFunctions(TestBase):
+    """
+    Test suite for core functionality of the Chaski networking framework.
 
-    nodes = []
-    ip = "127.0.0.1"
+    This class contains comprehensive test cases for validating essential
+    operations of ChaskiNode instances including message exchange, secure
+    communication, certificate management, and performance metrics.
+    """
 
-    @pytest_asyncio.fixture(autouse=True)
-    async def cleanup(self):
-        """Cleanup fixture to stop all nodes after each test"""
-        yield
-        for node in self.nodes:
-            print(f"Closing node {node.port}")
-            await node.stop()
-        await asyncio.sleep(1)
+    nodes: List[Union[ChaskiNode, ChaskiStreamer]] = []
+    ip: str = "127.0.0.1"
 
     async def test_ping(self) -> None:
         """
-        Test the ping functionality between ChaskiNode instances.
+        Validate the ping functionality and latency measurement between ChaskiNodes.
 
-        This test method performs the following steps:
-        1. Create three ChaskiNodes.
-        2. Connect nodes 1 and 2 to node 0.
-        3. Ping the first edge of node 0 and wait.
-        4. Ping the second edge of node 0 with a larger size and wait.
-        5. Assert that the latency of the second edge is greater than the first.
-        6. Reset the latencies of both edges.
-        7. Assert that the latencies of both edges are equal after resetting.
-        8. Close the nodes.
+        This test verifies that:
+        1. Nodes can send and receive ping messages successfully
+        2. Latency measurements correctly reflect message size differences
+        3. Latency reset functionality works as expected
 
-        Assertions
-        ----------
-        AssertionError
-            If the specified conditions are not met.
+        Test procedure:
+        1. Create three ChaskiNodes
+        2. Connect nodes 1 and 2 to node 0
+        3. Ping the first edge of node 0 with default size
+        4. Ping the second edge of node 0 with larger size
+        5. Verify the second edge has higher latency due to message size
+        6. Reset latency measurements for both edges
+        7. Confirm both edges show identical latency values after reset
 
-        Notes
-        -----
-        This test ensures that the ping functionality between nodes works correctly and that latency is calculated and reset properly.
+        Raises:
+            AssertionError: If latency measurements don't behave as expected
         """
         self.nodes = await create_nodes(3, self.ip)
         await self.nodes[1].connect(self.nodes[0])
@@ -88,23 +86,20 @@ class TestFunctions:
 
     async def test_message_ttl(self) -> None:
         """
-        Test the time-to-live (TTL) functionality of messages.
+        Validate the time-to-live (TTL) functionality of Message objects.
 
-        This test verifies that the message's TTL (time-to-live) value decrements correctly with each call to the `decrement_ttl` method.
-        The following steps are performed:
+        This test ensures that:
+        1. Messages are created with the correct initial TTL value
+        2. The decrement_ttl method properly reduces the TTL counter
+        3. Multiple TTL decrements accumulate correctly
 
-        1. Create a Message instance with a TTL value of 10.
-        2. Decrement the TTL value twice.
-        3. Assert that the TTL value is correctly decremented to 8.
+        Test procedure:
+        1. Create a Message instance with TTL of 10
+        2. Call decrement_ttl() twice in succession
+        3. Verify the TTL value is correctly reduced to 8
 
-        Assertions
-        ----------
-        AssertionError
-            If the TTL value does not decrement correctly.
-
-        Notes
-        -----
-        This test ensures that the TTL functionality works as expected, which is important for message lifetime management.
+        Raises:
+            AssertionError: If TTL does not decrement correctly
         """
         message = Message("command", ttl=10)
         message.decrement_ttl()
@@ -116,42 +111,35 @@ class TestFunctions:
 
     async def test_ssl_certificate(self) -> None:
         """
-        Test the SSL certificate configuration for secure communication.
+        Validate SSL certificate configuration and secure communication between nodes.
 
-        This test method verifies the correct setup and functionality
-        of SSL/TLS certificates and contexts for both the server and
-        client sides. The steps are as follows:
+        This test verifies that:
+        1. SSL contexts can be properly configured for both client and server roles
+        2. Certificate loading and verification works correctly
+        3. Secure communication can be established between nodes
 
-        1. Configure server SSL context to authenticate clients,
-           load server certificate and key, and verify with CA certificate.
-        2. Configure client SSL context to authenticate server,
-           load client certificate and key, and verify with CA certificate.
-        3. Initialize a ChaskiStreamer instance for the producer with SSL context.
-        4. Configure a second server SSL context for another client-server pair.
-        5. Configure a second client SSL context for server authentication.
-        6. Initialize another ChaskiStreamer instance for the consumer with SSL context.
-        7. Run the transmission between producer and consumer to validate secure communication.
+        Test procedure:
+        1. Configure server SSL context with client authentication requirements
+        2. Configure client SSL context with server authentication requirements
+        3. Set up producer ChaskiStreamer with the first set of SSL contexts
+        4. Set up consumer ChaskiStreamer with the second set of SSL contexts
+        5. Run a test transmission between the producer and consumer
+        6. Verify secure communication works correctly
 
-        Assertions
-        ----------
-        AssertionError
-            If the SSL contexts or certificates are improperly configured.
-
-        Notes
-        -----
-        This test ensures that the SSL configurations for ChaskiStreamer
-        instances are correctly set up to allow secure communication between
-        producer and consumer nodes.
+        Raises:
+            AssertionError: If secure communication fails between nodes
+            SSLError: If certificate configuration is incorrect
         """
+        uuid1: str = "3ea4e610-f276-4715-aa52-88d1cf14a295"
+        uuid2: str = "4c535672-949e-480f-9df4-9548a4cc2c1f"
 
-        uuid1 = "3ea4e610-f276-4715-aa52-88d1cf14a295"
-        uuid2 = "4c535672-949e-480f-9df4-9548a4cc2c1f"
-
-        path = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+        path: str = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
 
         # Configure the server SSL context for client authentication,
         # load the server's certificate and key, and set up the CA certificate for verification.
-        server_ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        server_ssl_context: ssl.SSLContext = ssl.create_default_context(
+            ssl.Purpose.CLIENT_AUTH
+        )
         server_ssl_context.load_cert_chain(
             certfile=f"{path}/certs_ca/server_{uuid1}.cert",
             keyfile=f"{path}/certs_ca/server_{uuid1}.key",
@@ -161,7 +149,9 @@ class TestFunctions:
 
         # Configure the client SSL context for server authentication,
         # load the client's certificate and key, and set up the CA certificate for verification.
-        client_ssl_context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        client_ssl_context: ssl.SSLContext = ssl.create_default_context(
+            ssl.Purpose.SERVER_AUTH
+        )
         client_ssl_context.load_cert_chain(
             certfile=f"{path}/certs_ca/client_{uuid1}.cert",
             keyfile=f"{path}/certs_ca/client_{uuid1}.key",
@@ -171,8 +161,7 @@ class TestFunctions:
 
         # Initialize the ChaskiStreamer instance for the producer, configuring SSL contexts
         # for secure communication, subscriptions, and other parameters.
-        producer = ChaskiStreamer(
-            # port=65433,
+        producer: ChaskiStreamer = ChaskiStreamer(
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
@@ -183,7 +172,9 @@ class TestFunctions:
 
         # Configure the second server SSL context for client authentication,
         # load the second server's certificate and key, and set up the CA certificate for verification.
-        server_ssl_context2 = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        server_ssl_context2: ssl.SSLContext = ssl.create_default_context(
+            ssl.Purpose.CLIENT_AUTH
+        )
         server_ssl_context2.load_cert_chain(
             certfile=f"{path}/certs_ca/server_{uuid2}.cert",
             keyfile=f"{path}/certs_ca/server_{uuid2}.key",
@@ -193,7 +184,9 @@ class TestFunctions:
 
         # Configure the second client SSL context for server authentication,
         # load the client's certificate and key, and set up the CA certificate for verification.
-        client_ssl_context2 = ssl.create_default_context(ssl.Purpose.SERVER_AUTH)
+        client_ssl_context2: ssl.SSLContext = ssl.create_default_context(
+            ssl.Purpose.SERVER_AUTH
+        )
         client_ssl_context2.load_cert_chain(
             certfile=f"{path}/certs_ca/client_{uuid2}.cert",
             keyfile=f"{path}/certs_ca/client_{uuid2}.key",
@@ -203,8 +196,7 @@ class TestFunctions:
 
         # Initialize the ChaskiStreamer instance for the consumer, configuring SSL contexts
         # for secure communication, subscriptions, and other parameters.
-        consumer = ChaskiStreamer(
-            # port=65434,
+        consumer: ChaskiStreamer = ChaskiStreamer(
             name="Consumer",
             subscriptions=["topic1"],
             reconnections=None,
@@ -217,32 +209,25 @@ class TestFunctions:
 
     async def test_ssl_certificate_CA_inline(self) -> None:
         """
-        Test the inline requesting of SSL certificates from the Certificate Authority (CA).
+        Validate automatic certificate acquisition from a Certificate Authority.
 
-        This test validates the process of requesting and obtaining SSL/TLS certificates
-        directly during the initialization of ChaskiStreamer instances for both producer and
-        consumer nodes via a single step. The test ensures that the ChaskiStreamer instances
-        can securely request and obtain SSL certificates at the same time they are initialized.
+        This test verifies that:
+        1. ChaskiStreamer instances can request certificates from a CA during initialization
+        2. The certificate request process completes successfully
+        3. Obtained certificates enable secure communication between nodes
 
-        Steps
-        -----
-        1. Initialize a ChaskiStreamer instance for the producer with inline SSL certificate request.
-        2. Initialize a ChaskiStreamer instance for the consumer with inline SSL certificate request.
-        3. Verify that the SSL certificates are correctly obtained by both producer and consumer.
-        4. Run a secure transmission between producer and consumer to validate the successful
-           acquisition and usage of the SSL certificates.
+        Test procedure:
+        1. Create producer ChaskiStreamer with automatic certificate request
+        2. Create consumer ChaskiStreamer with automatic certificate request
+        3. Run transmission between nodes using the obtained certificates
+        4. Verify secure communication works correctly
 
-        Assertions
-        ----------
-        AssertionError
-            If there are issues in obtaining or using the SSL certificates.
-
-        Notes
-        -----
-        This test ensures that the ChaskiStreamer instances correctly handle the process of
-        requesting SSL certificates from the CA and use them successfully for secure communications.
+        Raises:
+            AssertionError: If secure communication fails between nodes
+            ConnectionError: If CA connection fails
+            SSLError: If certificate request or validation fails
         """
-        producer = ChaskiStreamer(
+        producer: ChaskiStreamer = ChaskiStreamer(
             name="Producer",
             subscriptions=["topic1"],
             reconnections=None,
@@ -252,7 +237,7 @@ class TestFunctions:
             ),
         )
 
-        consumer = ChaskiStreamer(
+        consumer: ChaskiStreamer = ChaskiStreamer(
             name="Consumer",
             subscriptions=["topic1"],
             reconnections=None,
@@ -266,28 +251,20 @@ class TestFunctions:
 
     async def test_ssl_certificate_CA_off(self) -> None:
         """
-        Test the behavior of requesting SSL certificates from a non-existent CA.
+        Validate error handling when requesting certificates from an unavailable CA.
 
-        This test validates that the system can handle errors when requesting
-        SSL/TLS certificates from an incorrect or non-existent Certificate Authority (CA).
-        It ensures proper error handling and logging for such requests.
+        This test verifies that:
+        1. The system gracefully handles connection attempts to non-existent CAs
+        2. Appropriate errors are raised when certificate requests fail
+        3. The application doesn't crash when certificate acquisition fails
 
-        Steps
-        -----
-        1. Attempt to initialize a ChaskiStreamer instance for the producer with an incorrect CA address.
-        2. Intentionally cause an error by using a non-existent CA address.
-        3. Ensure that an exception is raised.
-        4. Verify appropriate error handling and logging mechanisms are invoked.
+        Test procedure:
+        1. Attempt to create a ChaskiStreamer with an invalid CA address
+        2. Expect and catch exceptions from the failed certificate request
+        3. Verify the system handled the error appropriately
 
-        Assertions
-        ----------
-        AssertionError
-            The test passes if the SSL certificate request raises an error due to an incorrect CA address.
-
-        Notes
-        -----
-        This test ensures robustness by checking that the streamer correctly handles failed SSL certificate
-        requests due to incorrect CA details.
+        Raises:
+            AssertionError: If error handling doesn't work as expected
         """
         try:
             ChaskiStreamer(
@@ -297,7 +274,7 @@ class TestFunctions:
                 ssl_certificates_location="tmp_certs_ca",
                 request_ssl_certificate="ChaskiCA@127.0.0.1:1111",
             )
-        except:
+        except Exception:
             assert (
                 True
             ), "SSL certificate request should raise an error with an incorrect CA address."
