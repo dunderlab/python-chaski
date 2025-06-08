@@ -10,8 +10,8 @@ Documentation Overview
    :maxdepth: 2
    :name: mastertoc
 
-   notebooks/01-chaski_node.pct
-   notebooks/02-chaski_streamer.ptc
+   notebooks/01-chaski_node
+   notebooks/02-chaski_streamer
    notebooks/03-chaski_remote.ptc
    notebooks/04-certification_authority
    notebooks/05-celery
