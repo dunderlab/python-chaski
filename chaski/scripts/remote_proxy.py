@@ -1,6 +1,9 @@
+"""Remote proxy server for executing Python modules in a Chaski network environment."""
+
 import asyncio
 import argparse
 import logging
+from typing import List
 
 from chaski.remote import ChaskiRemote
 
@@ -32,25 +35,27 @@ parser.add_argument(
     "modules", type=str, help="Comma-separated list of available modules"
 )
 
-args = parser.parse_args()
+args: argparse.Namespace = parser.parse_args()
 
 
-async def run():
-    """"""
-    server = ChaskiRemote(
+async def run() -> None:
+    """Initialize and run the ChaskiRemote server with command-line arguments."""
+    available_modules: List[str] = args.modules.split(",")
+
+    server: ChaskiRemote = ChaskiRemote(
         ip=args.ip,
-        port=args.port,
+        port=int(args.port),  # Convert port to int since it's defined as str in args
         name=args.name,
-        available=args.modules.split(","),
+        available=available_modules,
         run=False,
     )
 
-    print(f"CA Address: {server.address}")
+    print(f"Remote Server Address: {server.address}")
     await server.run()
 
 
-def main():
-    """"""
+def main() -> None:
+    """Entry point to start the ChaskiRemote server."""
     asyncio.run(run())
 
 

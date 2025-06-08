@@ -1,13 +1,22 @@
+"""Root streamer node for the Chaski distributed communication network."""
+
 import asyncio
 import logging
+
 from chaski.streamer import ChaskiStreamer
 
 logging.basicConfig(level=logging.DEBUG)
 
 
-async def run(ip, port, name):
-    """"""
-    root = ChaskiStreamer(
+async def run(ip: str, port: int, name: str) -> None:
+    """Initialize and run a ChaskiStreamer in root mode.
+
+    Args:
+        ip: IP address to bind the server to
+        port: Port number to listen on
+        name: Identifier for this root node
+    """
+    root: ChaskiStreamer = ChaskiStreamer(
         ip=ip,
         port=port,
         name=name,
@@ -18,8 +27,8 @@ async def run(ip, port, name):
     await root.run()
 
 
-def main(ip="127.0.0.1", port=65433, name="ChaskiRoot"):
-    """"""
+def main(ip: str = "127.0.0.1", port: int = 65433, name: str = "ChaskiRoot") -> None:
+    """Start a ChaskiStreamer root node with the given parameters."""
     asyncio.run(run(ip, port, name))
 
 
