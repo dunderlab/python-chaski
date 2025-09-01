@@ -251,22 +251,22 @@ class TestCertificateAuthority:
         ca = certificate_authority
 
         ca.load_ca(
-            ca_key_path=os.path.join(self.SSL_CERTIFICATES_LOCATION, "ca.key"),
-            ca_cert_path=os.path.join(self.SSL_CERTIFICATES_LOCATION, "ca.cert"),
+            ca_key_path=os.path.join(self.SSL_CERTIFICATES_LOCATION, "ca.key.pem"),
+            ca_cert_path=os.path.join(self.SSL_CERTIFICATES_LOCATION, "ca.crt.pem"),
         )
 
         ca.load_key_and_csr(
             private_key_client_path=os.path.join(
-                self.SSL_CERTIFICATES_LOCATION, f"client_{self.TEST_NAME}.key"
+                self.SSL_CERTIFICATES_LOCATION, f"client_{self.TEST_NAME}.key.pem"
             ),
             certificate_client_path=os.path.join(
-                self.SSL_CERTIFICATES_LOCATION, f"client_{self.TEST_NAME}.csr"
+                self.SSL_CERTIFICATES_LOCATION, f"client_{self.TEST_NAME}.csr.pem"
             ),
             private_key_server_path=os.path.join(
-                self.SSL_CERTIFICATES_LOCATION, f"server_{self.TEST_NAME}.key"
+                self.SSL_CERTIFICATES_LOCATION, f"server_{self.TEST_NAME}.key.pem"
             ),
             certificate_server_path=os.path.join(
-                self.SSL_CERTIFICATES_LOCATION, f"server_{self.TEST_NAME}.csr"
+                self.SSL_CERTIFICATES_LOCATION, f"server_{self.TEST_NAME}.csr.pem"
             ),
         )
 

@@ -1,7 +1,7 @@
 import os
 import ssl
 import datetime
-from ipaddress import ip_address
+from ipaddress import ip_address as _ip_address
 from typing import Literal, Optional
 
 # Importing cryptography modules for X509 certificates, private key generation,
@@ -24,9 +24,10 @@ class CertificateAuthority:
         id: str,
         ip_address: str,
         ssl_certificates_location: str = None,
-        ssl_certificate_attributes: dict = {},
+        ssl_certificate_attributes: dict = None,
         key_password: bytes | None = None,
         end_entity_key_size: int = 4096,
+        ca_key_size: int = 4096,
     ):
         """
         Initialize the Certificate Authority (CA).
@@ -46,10 +47,11 @@ class CertificateAuthority:
             self.ssl_certificates_location = ssl_certificates_location
 
         os.makedirs(self.ssl_certificates_location, exist_ok=True)
-        self.ssl_certificate_attributes = ssl_certificate_attributes
-        self.ip_address = ip_address
+        self.ssl_certificate_attributes = ssl_certificate_attributes or {}
+        self._ip = _ip_address(ip_address)
         self.key_password = key_password
         self.end_entity_key_size = end_entity_key_size
+        self.ca_key_size = ca_key_size
 
     def setup_certificate_authority(self) -> None:
         """
@@ -69,12 +71,14 @@ class CertificateAuthority:
         IOError
             If there is an error reading or writing the key and certificate files.
         """
-        self.ca_key_path_ = os.path.join(self.ssl_certificates_location, "ca.key")
-        self.ca_cert_path_ = os.path.join(self.ssl_certificates_location, "ca.cert")
+        self._require_attrs()
+
+        self.ca_key_path_ = os.path.join(self.ssl_certificates_location, "ca.key.pem")
+        self.ca_cert_path_ = os.path.join(self.ssl_certificates_location, "ca.crt.pem")
 
         # Generate CA key
         ca_key = rsa.generate_private_key(
-            public_exponent=65537, key_size=self.end_entity_key_size
+            public_exponent=65537, key_size=self.ca_key_size
         )
 
         # Write CA key to file
@@ -274,7 +278,8 @@ class CertificateAuthority:
 
         # Load CA key
         ca_key = serialization.load_pem_private_key(
-            self.load_certificate(self.ca_private_key_path), password=None
+            self.load_certificate(self.ca_private_key_path),
+            password=self.key_password,
         )
 
         # Load CA certificate
@@ -352,9 +357,7 @@ class CertificateAuthority:
 
         if role == "server":
             builder = builder.add_extension(
-                x509.SubjectAlternativeName(
-                    [x509.IPAddress(ip_address(self.ip_address))]
-                ),
+                x509.SubjectAlternativeName([x509.IPAddress(self._ip)]),
                 critical=False,
             )
 
@@ -387,12 +390,14 @@ class CertificateAuthority:
         IOError
             If there is an error writing the private key or CSR files to the filesystem.
         """
+        self._require_attrs()
+
         private_key_path_ = os.path.join(
-            self.ssl_certificates_location, f"{name}_{self.id}.key"
+            self.ssl_certificates_location, f"{name}_{self.id}.key.pem"
         )
 
         certificate_path_ = os.path.join(
-            self.ssl_certificates_location, f"{name}_{self.id}.csr"
+            self.ssl_certificates_location, f"{name}_{self.id}.csr.pem"
         )
 
         key = rsa.generate_private_key(
@@ -572,25 +577,21 @@ class CertificateAuthority:
     @property
     def certificate_signed_paths(self) -> dict:
         """
-        Provide the path to the signed certificate.
+        Get the paths to the signed certificates for both client and server.
 
-        This property retrieves the file path to the signed certificate
-        by replacing the '.csr.pem' suffix of the CSR path with
-        '.sign.csr.pem'.
+        This property returns a dictionary containing the file paths to the signed
+        certificates for both the client and server. The paths are derived from
+        the CSR paths by replacing the '.csr' extension with '.cert'.
 
         Returns
         -------
-        str
-            The file path to the signed certificate.
-
-        Raises
-        ------
-        Exception
-            If the CSR path is not set.
+        dict
+            A dictionary with 'client' and 'server' keys mapping to their respective
+            signed certificate file paths.
         """
         return {
-            "client": self.certificate_paths["client"].replace(".csr", ".cert"),
-            "server": self.certificate_paths["server"].replace(".csr", ".cert"),
+            "client": self.certificate_paths["client"].replace(".csr.pem", ".crt.pem"),
+            "server": self.certificate_paths["server"].replace(".csr.pem", ".crt.pem"),
         }
 
     def load_certificate(self, path: str) -> bytes:
@@ -670,6 +671,7 @@ class CertificateAuthority:
         ssl_context_client.load_cert_chain(
             certfile=self.certificate_signed_paths["client"],
             keyfile=self.private_key_paths["client"],
+            password=self.key_password,
         )
         # Load and set the Certificate Authority (CA) certificate to verify the client's server certificate
         ssl_context_client.load_verify_locations(cafile=self.ca_certificate_path)
@@ -682,6 +684,7 @@ class CertificateAuthority:
         ssl_context_server.load_cert_chain(
             certfile=self.certificate_signed_paths["server"],
             keyfile=self.private_key_paths["server"],
+            password=self.key_password,
         )
         # Load and set the Certificate Authority (CA) certificate to verify the server's client certificate
         ssl_context_server.load_verify_locations(cafile=self.ca_certificate_path)
@@ -720,3 +723,17 @@ class CertificateAuthority:
         self.write_certificate(cert_path, cert_pem)
         os.chmod(cert_path, 0o644)
         return cert_path
+
+    def _require_attrs(
+        self,
+        keys=(
+            "Country Name",
+            "State or Province Name",
+            "Locality Name",
+            "Organization Name",
+            "Common Name",
+        ),
+    ):
+        missing = [k for k in keys if k not in self.ssl_certificate_attributes]
+        if missing:
+            raise ValueError(f"Missing certificate attributes: {missing}")
