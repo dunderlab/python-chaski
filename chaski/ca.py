@@ -91,8 +91,8 @@ class ChaskiCA(ChaskiNode):
             f"{self.name}: Starting the signing process for CSR data for node '{node_id}'"
         )
         # Sign the provided Certificate Signing Request (CSR) using the Certificate Authority (CA)
-        signed_csr_client = self.ca.sign_csr(csr_data_client)
-        signed_csr_server = self.ca.sign_csr(csr_data_server)
+        signed_csr_client = self.ca.sign_csr(csr_data_client, role="client")
+        signed_csr_server = self.ca.sign_csr(csr_data_server, role="server")
 
         # Prepare the dictionary containing the signed certificates for client and server,
         # and the path to the CA certificate. This dictionary will be returned as the result

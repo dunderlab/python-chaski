@@ -271,10 +271,18 @@ class TestCertificateAuthority:
         )
 
         with open(ca.certificate_signed_paths["client"], "wb") as file:
-            file.write(ca.sign_csr(ca.load_certificate(ca.certificate_paths["client"])))
+            file.write(
+                ca.sign_csr(
+                    ca.load_certificate(ca.certificate_paths["client"]), role="client"
+                )
+            )
 
         with open(ca.certificate_signed_paths["server"], "wb") as file:
-            file.write(ca.sign_csr(ca.load_certificate(ca.certificate_paths["server"])))
+            file.write(
+                ca.sign_csr(
+                    ca.load_certificate(ca.certificate_paths["server"]), role="server"
+                )
+            )
 
         ca_cert: Certificate = x509.load_pem_x509_certificate(
             ca.load_certificate(ca.ca_certificate_path), default_backend()

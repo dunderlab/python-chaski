@@ -2,6 +2,7 @@ import os
 import ssl
 import datetime
 from ipaddress import ip_address
+from typing import Literal, Optional
 
 # Importing cryptography modules for X509 certificates, private key generation,
 # and serialization, including RSA key generation and PEM encoding without encryption.
@@ -241,7 +242,9 @@ class CertificateAuthority:
         """
         self.ca_cert_path_ = path
 
-    def sign_csr(self, csr_data: bytes, is_server: bool | None = None) -> bytes:
+    def sign_csr(
+        self, csr_data: bytes, role: Optional[Literal["server", "client"]] = None
+    ) -> bytes:
         """
         Sign a Certificate Signing Request (CSR) with the Certificate Authority (CA) key.
 
@@ -252,9 +255,9 @@ class CertificateAuthority:
         ----------
         csr_data : bytes
             The certificate signing request data in PEM format.
-        is_server : bool, optional
-            If True, indicates this is a server certificate. If False, indicates this is a client certificate.
-            If None, will be inferred from the Common Name (CN) in the CSR by checking if it contains "server".
+        role : Optional[Literal["server", "client"]], optional
+            The role of the certificate, either "server" or "client". If not provided,
+            it will be inferred from the Common Name in the CSR.
 
         Returns
         -------
@@ -282,10 +285,15 @@ class CertificateAuthority:
         # Load client CSR
         csr = x509.load_pem_x509_csr(csr_data)
 
-        # infer by CN if not provided
-        if is_server is None:
-            cn = csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-            is_server = "server" in cn.lower()
+        # Heuristic if role not explicitly provided
+        if role is None:
+            try:
+                cn = csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[
+                    0
+                ].value.lower()
+                role = "server" if "server" in cn else "client"
+            except Exception:
+                role = "client"
 
         ku = x509.KeyUsage(
             digital_signature=True,
@@ -300,12 +308,12 @@ class CertificateAuthority:
         )
         eku = x509.ExtendedKeyUsage(
             [ExtendedKeyUsageOID.SERVER_AUTH]
-            if is_server
+            if role == "server"
             else [ExtendedKeyUsageOID.CLIENT_AUTH]
         )
 
         # Generate client certificate
-        certificate = (
+        builder = (
             x509.CertificateBuilder()
             # Set the subject name for the certificate to the subject specified in the CSR (Certificate Signing Request)
             .subject_name(csr.subject)
@@ -333,16 +341,6 @@ class CertificateAuthority:
             .add_extension(ku, critical=True)
             .add_extension(eku, critical=False)
             .add_extension(
-                (
-                    x509.SubjectAlternativeName(
-                        [x509.IPAddress(ip_address(self.ip_address))]
-                    )
-                    if is_server
-                    else x509.SubjectAlternativeName([])
-                ),  # no SAN-IP en client por defecto
-                critical=False,
-            )
-            .add_extension(
                 x509.SubjectKeyIdentifier.from_public_key(csr.public_key()),
                 critical=False,
             )
@@ -350,9 +348,18 @@ class CertificateAuthority:
                 x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()),
                 critical=False,
             )
-            # Sign the certificate using the CA's private key with SHA256 as the hashing algorithm
-            .sign(ca_key, hashes.SHA256())
         )
+
+        if role == "server":
+            builder = builder.add_extension(
+                x509.SubjectAlternativeName(
+                    [x509.IPAddress(ip_address(self.ip_address))]
+                ),
+                critical=False,
+            )
+
+        # Sign the certificate using the CA's private key with SHA256 as the hashing algorithm
+        certificate = builder.sign(ca_key, hashes.SHA256())
 
         return certificate.public_bytes(serialization.Encoding.PEM)
 
@@ -683,7 +690,7 @@ class CertificateAuthority:
 
         return ssl_context_client, ssl_context_server
 
-    def sign_and_store(self, name: str) -> str:
+    def sign_and_store(self, name: Literal["server", "client"]) -> str:
         """
         Sign a Certificate Signing Request (CSR) and store the resulting certificate.
 
@@ -709,6 +716,7 @@ class CertificateAuthority:
         """
         csr_path = self.certificate_paths[name]
         cert_path = self.certificate_signed_paths[name]
-        cert_pem = self.sign_csr(self.load_certificate(csr_path))
+        cert_pem = self.sign_csr(self.load_certificate(csr_path), role=name)
         self.write_certificate(cert_path, cert_pem)
+        os.chmod(cert_path, 0o644)
         return cert_path
