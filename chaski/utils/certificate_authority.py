@@ -1,13 +1,16 @@
 import os
 import ssl
 import datetime
+from ipaddress import ip_address
 
 # Importing cryptography modules for X509 certificates, private key generation,
 # and serialization, including RSA key generation and PEM encoding without encryption.
 from cryptography import x509
-from cryptography.x509.oid import NameOID
+from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.serialization import BestAvailableEncryption
+
 
 from chaski.utils import user_data_dir
 
@@ -21,6 +24,8 @@ class CertificateAuthority:
         ip_address: str,
         ssl_certificates_location: str = None,
         ssl_certificate_attributes: dict = {},
+        key_password: bytes | None = None,
+        end_entity_key_size: int = 4096,
     ):
         """
         Initialize the Certificate Authority (CA).
@@ -42,6 +47,8 @@ class CertificateAuthority:
         os.makedirs(self.ssl_certificates_location, exist_ok=True)
         self.ssl_certificate_attributes = ssl_certificate_attributes
         self.ip_address = ip_address
+        self.key_password = key_password
+        self.end_entity_key_size = end_entity_key_size
 
     def setup_certificate_authority(self) -> None:
         """
@@ -65,7 +72,16 @@ class CertificateAuthority:
         self.ca_cert_path_ = os.path.join(self.ssl_certificates_location, "ca.cert")
 
         # Generate CA key
-        ca_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        ca_key = rsa.generate_private_key(
+            public_exponent=65537, key_size=self.end_entity_key_size
+        )
+
+        # Write CA key to file
+        encryption = (
+            BestAvailableEncryption(self.key_password)
+            if self.key_password
+            else serialization.NoEncryption()
+        )
 
         # Write CA key to file
         with open(self.ca_key_path_, "wb") as f:
@@ -73,9 +89,11 @@ class CertificateAuthority:
                 ca_key.private_bytes(
                     encoding=serialization.Encoding.PEM,
                     format=serialization.PrivateFormat.TraditionalOpenSSL,
-                    encryption_algorithm=serialization.NoEncryption(),
+                    encryption_algorithm=encryption,
                 )
             )
+
+        os.chmod(self.ca_key_path_, 0o600)
 
         # Generate CA certificate
         subject = issuer = x509.Name(
@@ -112,9 +130,9 @@ class CertificateAuthority:
             .issuer_name(issuer)
             .public_key(ca_key.public_key())
             .serial_number(x509.random_serial_number())
-            .not_valid_before(datetime.datetime.utcnow())
+            .not_valid_before(datetime.datetime.now(datetime.UTC))
             .not_valid_after(
-                datetime.datetime.utcnow() + datetime.timedelta(days=365 * 10)
+                datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=365 * 10)
             )
             .add_extension(
                 x509.BasicConstraints(ca=True, path_length=None),
@@ -148,6 +166,7 @@ class CertificateAuthority:
         # Write CA certificate to file
         with open(self.ca_cert_path_, "wb") as f:
             f.write(ca_certificate.public_bytes(serialization.Encoding.PEM))
+        os.chmod(self.ca_cert_path_, 0o644)
 
     @property
     def ca_private_key_path(self) -> str:
@@ -222,7 +241,7 @@ class CertificateAuthority:
         """
         self.ca_cert_path_ = path
 
-    def sign_csr(self, csr_data: bytes) -> bytes:
+    def sign_csr(self, csr_data: bytes, is_server: bool | None = None) -> bytes:
         """
         Sign a Certificate Signing Request (CSR) with the Certificate Authority (CA) key.
 
@@ -233,6 +252,9 @@ class CertificateAuthority:
         ----------
         csr_data : bytes
             The certificate signing request data in PEM format.
+        is_server : bool, optional
+            If True, indicates this is a server certificate. If False, indicates this is a client certificate.
+            If None, will be inferred from the Common Name (CN) in the CSR by checking if it contains "server".
 
         Returns
         -------
@@ -260,6 +282,28 @@ class CertificateAuthority:
         # Load client CSR
         csr = x509.load_pem_x509_csr(csr_data)
 
+        # infer by CN if not provided
+        if is_server is None:
+            cn = csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+            is_server = "server" in cn.lower()
+
+        ku = x509.KeyUsage(
+            digital_signature=True,
+            content_commitment=False,
+            key_encipherment=True,
+            data_encipherment=False,
+            key_agreement=False,
+            key_cert_sign=False,
+            crl_sign=False,
+            encipher_only=False,
+            decipher_only=False,
+        )
+        eku = x509.ExtendedKeyUsage(
+            [ExtendedKeyUsageOID.SERVER_AUTH]
+            if is_server
+            else [ExtendedKeyUsageOID.CLIENT_AUTH]
+        )
+
         # Generate client certificate
         certificate = (
             x509.CertificateBuilder()
@@ -272,10 +316,10 @@ class CertificateAuthority:
             # Generate a random serial number for the certificate to ensure its uniqueness.
             .serial_number(x509.random_serial_number())
             .not_valid_before(
-                datetime.datetime.utcnow()
+                datetime.datetime.now(datetime.UTC)
             )  # Set certificate's validity start time to current time
             .not_valid_after(
-                datetime.datetime.utcnow()
+                datetime.datetime.now(datetime.UTC)
                 + datetime.timedelta(
                     days=365
                 )  # Set certificate's expiration time to one year from now
@@ -286,8 +330,16 @@ class CertificateAuthority:
                 critical=True,
             )
             # Add the subject alternative name extension with the IP address
+            .add_extension(ku, critical=True)
+            .add_extension(eku, critical=False)
             .add_extension(
-                x509.SubjectAlternativeName([x509.IPAddress(self.ip_address)]),
+                (
+                    x509.SubjectAlternativeName(
+                        [x509.IPAddress(ip_address(self.ip_address))]
+                    )
+                    if is_server
+                    else x509.SubjectAlternativeName([])
+                ),  # no SAN-IP en client por defecto
                 critical=False,
             )
             .add_extension(
@@ -336,7 +388,16 @@ class CertificateAuthority:
             self.ssl_certificates_location, f"{name}_{self.id}.csr"
         )
 
-        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+        key = rsa.generate_private_key(
+            public_exponent=65537, key_size=self.end_entity_key_size
+        )
+
+        # Choose encryption strategy for private key
+        encryption = (
+            BestAvailableEncryption(self.key_password)
+            if self.key_password
+            else serialization.NoEncryption()
+        )
 
         # Write client key to file
         with open(private_key_path_, "wb") as f:
@@ -344,9 +405,10 @@ class CertificateAuthority:
                 key.private_bytes(
                     encoding=serialization.Encoding.PEM,
                     format=serialization.PrivateFormat.TraditionalOpenSSL,
-                    encryption_algorithm=serialization.NoEncryption(),
+                    encryption_algorithm=encryption,
                 )
             )
+        os.chmod(private_key_path_, 0o600)
 
         # Generate client CSR
         csr = (
@@ -383,6 +445,7 @@ class CertificateAuthority:
         # Write client CSR to file
         with open(certificate_path_, "wb") as f:
             f.write(csr.public_bytes(serialization.Encoding.PEM))
+        os.chmod(certificate_path_, 0o644)
 
         return private_key_path_, certificate_path_
 
@@ -446,7 +509,7 @@ class CertificateAuthority:
         self.certificate_server_path_ = certificate_server_path
 
     @property
-    def private_key_paths(self) -> str:
+    def private_key_paths(self) -> dict:
         """
         Return the path to the node's private key.
 
@@ -473,7 +536,7 @@ class CertificateAuthority:
             raise Exception("Private key path not set")
 
     @property
-    def certificate_paths(self) -> str:
+    def certificate_paths(self) -> dict:
         """
         Retrieve the path to the node's Certificate Signing Request (CSR).
 
@@ -500,7 +563,7 @@ class CertificateAuthority:
             raise Exception("CA certificate path not set")
 
     @property
-    def certificate_signed_paths(self) -> str:
+    def certificate_signed_paths(self) -> dict:
         """
         Provide the path to the signed certificate.
 
@@ -574,7 +637,7 @@ class CertificateAuthority:
         with open(path, "wb") as cert_file:
             cert_file.write(certificate)
 
-    def get_context(self) -> ssl.SSLContext:
+    def get_context(self) -> tuple[ssl.SSLContext, ssl.SSLContext]:
         """
         Create and configure an SSL context for secure communication.
 
@@ -619,3 +682,33 @@ class CertificateAuthority:
         ssl_context_server.verify_mode = ssl.CERT_REQUIRED
 
         return ssl_context_client, ssl_context_server
+
+    def sign_and_store(self, name: str) -> str:
+        """
+        Sign a Certificate Signing Request (CSR) and store the resulting certificate.
+
+        This method takes a CSR for either a client or server, signs it using the
+        Certificate Authority's private key, and stores the resulting signed certificate.
+
+        Parameters
+        ----------
+        name : str
+            Name identifier for the certificate ('client' or 'server')
+
+        Returns
+        -------
+        str
+            Path to the stored signed certificate file
+
+        Raises
+        ------
+        KeyError
+            If the provided name is not 'client' or 'server'
+        IOError
+            If there is an error reading the CSR or writing the signed certificate
+        """
+        csr_path = self.certificate_paths[name]
+        cert_path = self.certificate_signed_paths[name]
+        cert_pem = self.sign_csr(self.load_certificate(csr_path))
+        self.write_certificate(cert_path, cert_pem)
+        return cert_path
